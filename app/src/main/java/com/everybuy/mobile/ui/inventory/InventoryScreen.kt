@@ -1,6 +1,7 @@
 package com.everybuy.mobile.ui.inventory
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,12 +14,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -56,7 +60,7 @@ import com.everybuy.mobile.ui.auth.AppTheme
     var categoryMenuExpanded by remember { mutableStateOf(false) }
     Scaffold(topBar = {
         TopAppBar(title = { Column { Text("Inventory"); Text(user.name.ifBlank { user.email }, style = MaterialTheme.typography.labelMedium) } }, actions = {
-            androidx.compose.material3.Box {
+            Box {
                 TextButton(onClick = { themeMenuExpanded = true }) { Text("${theme.name.lowercase().replaceFirstChar { it.uppercase() }} theme") }
                 DropdownMenu(expanded = themeMenuExpanded, onDismissRequest = { themeMenuExpanded = false }) {
                     AppTheme.entries.forEach { option -> DropdownMenuItem(text = { Text(option.name.lowercase().replaceFirstChar { it.uppercase() }) }, onClick = { themeMenuExpanded = false; setTheme(option) }) }
@@ -65,7 +69,7 @@ import com.everybuy.mobile.ui.auth.AppTheme
             TextButton(onClick = onSignOut) { Text("Sign out") }
         })
     }, floatingActionButton = {
-        if (isOwner) ExtendedFloatingActionButton(onClick = onAddProduct, text = { Text("Add product") })
+        if (isOwner) ExtendedFloatingActionButton(onClick = onAddProduct, icon = { Icon(Icons.Rounded.Add, contentDescription = null) }, text = { Text("Add product") })
     }) { insets ->
         Column(Modifier.fillMaxSize().padding(insets).padding(horizontal = 16.dp)) {
             OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth().padding(top = 8.dp), label = { Text("Search products") }, singleLine = true)
@@ -76,7 +80,7 @@ import com.everybuy.mobile.ui.auth.AppTheme
                         FilterChip(selected = packFilter == value, onClick = { packFilter = value }, label = { Text(label) })
                     }
                 }
-                androidx.compose.material3.Box {
+                Box {
                     TextButton(onClick = { categoryMenuExpanded = true }) { Text(inventory.categories.firstOrNull { it.id == categoryFilter }?.name ?: "All categories") }
                     DropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
                         DropdownMenuItem(text = { Text("All categories") }, onClick = { categoryFilter = "ALL"; categoryMenuExpanded = false })

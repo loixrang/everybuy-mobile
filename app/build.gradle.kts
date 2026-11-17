@@ -17,6 +17,23 @@ val localProps = Properties().apply {
 fun prop(name: String, fallback: String): String =
     (findProperty(name) as String?) ?: localProps.getProperty(name) ?: fallback
 
+/**
+ * Retrofit paths are rooted at `api/v1/...`, so [API_BASE_URL] is the server origin
+ * with a trailing slash (for example `http://10.0.2.2:3000/`). The effective API root
+ * is therefore `{API_BASE_URL}api/v1` (emulator default: `http://10.0.2.2:3000/api/v1`).
+ *
+ * Override debug with `everybuy.apiBaseUrl` (physical devices need the host LAN IP).
+ * Override release with `everybuy.apiBaseUrlRelease`.
+ */
+fun apiBaseUrl(raw: String): String {
+    val trimmed = raw.trim().trimEnd('/')
+    require(trimmed.isNotEmpty()) { "API base URL must not be empty" }
+    return "$trimmed/"
+}
+
+val debugApiBaseUrl = apiBaseUrl(prop("everybuy.apiBaseUrl", "http://10.0.2.2:3000"))
+val releaseApiBaseUrl = apiBaseUrl(prop("everybuy.apiBaseUrlRelease", "https://api.everybuy.app"))
+
 android {
     namespace = "com.everybuy.mobile"
     compileSdk = 37
@@ -28,20 +45,21 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        buildConfigField("String", "API_BASE_URL", "\"${prop("everybuy.apiBaseUrl", "http://10.0.2.2:3000/")}\"")
     }
 
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
             isMinifyEnabled = false
+            // Emulator → host loopback. Physical device: set everybuy.apiBaseUrl in local.properties.
+            buildConfigField("String", "API_BASE_URL", "\"$debugApiBaseUrl\"")
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            buildConfigField("String", "API_BASE_URL", "\"${prop("everybuy.apiBaseUrlRelease", "https://api.everybuy.app/")}\"")
+            // Existing production API origin from the Android project release config.
+            buildConfigField("String", "API_BASE_URL", "\"$releaseApiBaseUrl\"")
         }
     }
 

@@ -26,7 +26,24 @@ import androidx.compose.ui.unit.dp
 import com.everybuy.mobile.data.AuthState
 import com.everybuy.mobile.navigation.AuthenticatedApp
 
-@Composable fun AuthScreen(state: AuthState, theme: AppTheme, signIn: (String, String) -> Unit, verifyTotp: (String) -> Unit, retrySession: () -> Unit, signOut: () -> Unit, setTheme: (AppTheme) -> Unit) {
+@Composable fun AuthScreen(
+    state: AuthState,
+    theme: AppTheme,
+    signIn: (String, String) -> Unit,
+    verifyTotp: (String) -> Unit,
+    retrySession: () -> Unit,
+    signOut: () -> Unit,
+    setTheme: (AppTheme) -> Unit,
+    deepLink: AuthDeepLink? = null,
+    onDeepLinkHandled: () -> Unit = {},
+) {
+    if (deepLink != null) {
+        when (deepLink) {
+            is AuthDeepLink.ResetPassword -> ResetPasswordScreen(deepLink.token, deepLink.error, onBackToSignIn = onDeepLinkHandled)
+            is AuthDeepLink.AcceptInvite -> InviteAcceptScreen(deepLink.token, onDone = onDeepLinkHandled)
+        }
+        return
+    }
     if (state is AuthState.SignedIn) {
         AuthenticatedApp(user = state.user, staff = state.staff, theme = theme, onSignOut = signOut, setTheme = setTheme)
         return
@@ -34,6 +51,11 @@ import com.everybuy.mobile.navigation.AuthenticatedApp
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }
+    var showForgot by rememberSaveable { mutableStateOf(false) }
+    if (showForgot) {
+        ForgotPasswordScreen(onBack = { showForgot = false })
+        return
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.Center) {
         Text("Everybuy", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.height(8.dp))
@@ -56,6 +78,7 @@ import com.everybuy.mobile.navigation.AuthenticatedApp
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(password, { password = it }, Modifier.fillMaxWidth(), label = { Text("Password") }, singleLine = true, visualTransformation = PasswordVisualTransformation())
                 Button(onClick = { signIn(email, password) }, Modifier.fillMaxWidth().padding(top = 20.dp), enabled = email.isNotBlank() && password.isNotBlank()) { Text("Sign in") }
+                TextButton(onClick = { showForgot = true }, Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally).padding(top = 4.dp)) { Text("Forgot password?") }
                 }
             }
             AuthState.TwoFactor -> {

@@ -16,7 +16,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.decodeFromJsonElement
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -57,6 +56,33 @@ interface AuthApi {
     @retrofit2.http.GET("api/v1/auth/get-session") suspend fun getSession(): JsonElement?
     @retrofit2.http.POST("api/v1/auth/sign-out") suspend fun signOut(): JsonElement
     @retrofit2.http.POST("api/v1/auth/two-factor/verify-totp") suspend fun verifyTotp(@retrofit2.http.Body body: CodeRequest): SignInPayload
+    @retrofit2.http.POST("api/v1/auth/request-password-reset") suspend fun requestPasswordReset(@retrofit2.http.Body body: JsonObject): JsonObject
+    @retrofit2.http.POST("api/v1/auth/reset-password") suspend fun resetPassword(@retrofit2.http.Body body: JsonObject): JsonObject
+    @retrofit2.http.GET("api/v1/staff/invite/preview") suspend fun invitePreview(@retrofit2.http.Query("token") token: String): InvitePreviewDto
+    @retrofit2.http.POST("api/v1/staff/invite/accept") suspend fun acceptInvite(@retrofit2.http.Body body: JsonObject): JsonObject
+}
+
+@Serializable data class InvitePreviewDto(val name: String = "", val email: String = "", val expiresAt: String = "")
+
+data class PasswordResetInput(val email: String, val redirectTo: String) {
+    fun toJson(): JsonObject = buildJsonObject {
+        put("email", JsonPrimitive(email.trim()))
+        put("redirectTo", JsonPrimitive(redirectTo))
+    }
+}
+
+data class ResetPasswordInput(val token: String, val newPassword: String) {
+    fun toJson(): JsonObject = buildJsonObject {
+        put("token", JsonPrimitive(token))
+        put("newPassword", JsonPrimitive(newPassword))
+    }
+}
+
+data class AcceptInviteInput(val token: String, val password: String) {
+    fun toJson(): JsonObject = buildJsonObject {
+        put("token", JsonPrimitive(token))
+        put("password", JsonPrimitive(password))
+    }
 }
 
 @Serializable data class ProductDto(
@@ -106,7 +132,61 @@ interface CatalogApi {
 @Serializable data class OverviewRecentSale(val id: String, val reference: String, val soldAt: String, val customer: OverviewCustomer? = null, val itemsTotal: String, val amountPaid: String, val balance: String)
 @Serializable data class DailyOverview(val salesToday: OverviewSalesToday, val paymentsReceived: String, val customerBalances: String, val lowStock: List<OverviewLowStock> = emptyList(), val recentSales: List<OverviewRecentSale> = emptyList())
 
-interface ReportsApi { @retrofit2.http.GET("api/v1/reports/overview") suspend fun dailyOverview(): DailyOverview }
+@Serializable data class MonthlyProductSold(
+    val productId: String,
+    val productName: String = "",
+    val bagsSold: Int = 0,
+    val retailPacksSold: Int = 0,
+    val totalPacksSold: Int = 0,
+)
+
+@Serializable data class MonthlyClosingStock(
+    val productId: String,
+    val productName: String = "",
+    val closingPacks: Int = 0,
+)
+
+@Serializable data class MonthlyReportDto(
+    val month: String = "",
+    val timezone: String = "Africa/Lagos",
+    val salesTotal: String = "0",
+    val moneyReceived: String = "0",
+    val outstandingDebtAtMonthEnd: String = "0",
+    val productsSold: List<MonthlyProductSold> = emptyList(),
+    val closingStock: List<MonthlyClosingStock> = emptyList(),
+)
+
+@Serializable data class MissingCostItem(
+    val saleItemId: String = "",
+    val productId: String = "",
+    val productName: String = "",
+    val quantity: Int = 0,
+    val packsPerUnit: Int = 0,
+    val currentCostPerPack: String? = null,
+)
+
+@Serializable data class MissingCostSale(
+    val saleId: String,
+    val saleNumber: String = "",
+    val soldAt: String = "",
+    val items: List<MissingCostItem> = emptyList(),
+)
+
+@Serializable data class ProfitReportDto(
+    val revenue: String? = null,
+    val cogs: String? = null,
+    val grossProfit: String? = null,
+    val expenses: String = "0",
+    val netProfit: String? = null,
+    val missingCostCount: Int = 0,
+    val missingCostSales: List<MissingCostSale> = emptyList(),
+)
+
+interface ReportsApi {
+    @retrofit2.http.GET("api/v1/reports/overview") suspend fun dailyOverview(): DailyOverview
+    @retrofit2.http.GET("api/v1/reports/monthly") suspend fun monthly(@retrofit2.http.Query("month") month: String): MonthlyReportDto
+    @retrofit2.http.GET("api/v1/reports/profit") suspend fun profit(@retrofit2.http.Query("month") month: String): ProfitReportDto
+}
 interface MeApi { @retrofit2.http.GET("api/v1/me") suspend fun me(): List<StaffProfile> }
 
 @Serializable data class StockMovementDto(
@@ -120,7 +200,9 @@ interface MeApi { @retrofit2.http.GET("api/v1/me") suspend fun me(): List<StaffP
 @Serializable data class StockMutationResultDto(val updateProduct: List<UpdatedProductStockDto> = emptyList(), val replayed: Boolean = false)
 interface StockApi {
     @retrofit2.http.GET("api/v1/stock/movements") suspend fun movements(@retrofit2.http.Query("page") page: Int = 1, @retrofit2.http.Query("limit") limit: Int = 50): StockMovementsPageDto
+    @retrofit2.http.GET("api/v1/stock/movements/{id}") suspend fun movement(@retrofit2.http.Path("id") id: String): StockMovementDto
     @retrofit2.http.POST("api/v1/stock/additions") suspend fun addStock(@retrofit2.http.Body body: JsonObject): StockMutationResultDto
+    @retrofit2.http.POST("api/v1/stock/adjustments") suspend fun adjustStock(@retrofit2.http.Body body: JsonObject): StockMutationResultDto
 }
 interface SuppliersApi { @retrofit2.http.GET("api/v1/suppliers") suspend fun suppliers(): List<SupplierDto> }
 
@@ -131,7 +213,7 @@ class EncryptedCookieJar @Inject constructor(@ApplicationContext private val con
     private val lock = Any()
 
     init { synchronized(lock) { cookies.addAll(readCookies()) } }
-    override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) = synchronized(lock) {
+    override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>): Unit = synchronized(lock) {
         val originKey = originKey(url)
         this.cookies.removeAll { old -> old.originKey == originKey && cookies.any { it.name == old.cookie.name && it.domain == old.cookie.domain && it.path == old.cookie.path } }
         this.cookies.addAll(cookies.filter { it.expiresAt > System.currentTimeMillis() }.map { CookieEntry(originKey, it) })
@@ -151,7 +233,7 @@ class EncryptedCookieJar @Inject constructor(@ApplicationContext private val con
         })
         context.secureStore.edit { it[blobKey] = encrypt(payload.toByteArray()).joinToString("") { b -> "%02x".format(b) } }
     }
-    private fun readCookies(): List<Cookie> = runBlocking {
+    private fun readCookies(): List<CookieEntry> = runBlocking {
         val value = context.secureStore.data.first()[blobKey] ?: return@runBlocking emptyList()
         runCatching {
             val bytes = value.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
@@ -208,6 +290,16 @@ object NetworkModule {
     @Provides @Singleton fun meApi(client: okhttp3.OkHttpClient): MeApi = Retrofit.Builder().baseUrl(com.everybuy.mobile.BuildConfig.API_BASE_URL).client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(MeApi::class.java)
     @Provides @Singleton fun stockApi(client: okhttp3.OkHttpClient): StockApi = Retrofit.Builder().baseUrl(com.everybuy.mobile.BuildConfig.API_BASE_URL).client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(StockApi::class.java)
     @Provides @Singleton fun suppliersApi(client: okhttp3.OkHttpClient): SuppliersApi = Retrofit.Builder().baseUrl(com.everybuy.mobile.BuildConfig.API_BASE_URL).client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(SuppliersApi::class.java)
+    @Provides @Singleton fun stockTakesApi(client: okhttp3.OkHttpClient): StockTakesApi = Retrofit.Builder().baseUrl(com.everybuy.mobile.BuildConfig.API_BASE_URL).client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(StockTakesApi::class.java)
+    @Provides @Singleton fun salesApi(client: okhttp3.OkHttpClient): SalesApi = Retrofit.Builder().baseUrl(com.everybuy.mobile.BuildConfig.API_BASE_URL).client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(SalesApi::class.java)
+    @Provides @Singleton fun customersApi(client: okhttp3.OkHttpClient): CustomersApi = Retrofit.Builder().baseUrl(com.everybuy.mobile.BuildConfig.API_BASE_URL).client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(CustomersApi::class.java)
+    @Provides @Singleton fun expensesApi(client: okhttp3.OkHttpClient): ExpensesApi = Retrofit.Builder().baseUrl(com.everybuy.mobile.BuildConfig.API_BASE_URL).client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(ExpensesApi::class.java)
+    @Provides @Singleton fun auditApi(client: okhttp3.OkHttpClient): AuditApi = Retrofit.Builder().baseUrl(com.everybuy.mobile.BuildConfig.API_BASE_URL).client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(AuditApi::class.java)
+    @Provides @Singleton fun adminSettingsApi(client: okhttp3.OkHttpClient): AdminSettingsApi = Retrofit.Builder().baseUrl(com.everybuy.mobile.BuildConfig.API_BASE_URL).client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(AdminSettingsApi::class.java)
+    @Provides @Singleton fun adminStaffApi(client: okhttp3.OkHttpClient): AdminStaffApi = Retrofit.Builder().baseUrl(com.everybuy.mobile.BuildConfig.API_BASE_URL).client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(AdminStaffApi::class.java)
+    @Provides @Singleton fun adminCatalogApi(client: okhttp3.OkHttpClient): AdminCatalogApi = Retrofit.Builder().baseUrl(com.everybuy.mobile.BuildConfig.API_BASE_URL).client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(AdminCatalogApi::class.java)
+    @Provides @Singleton fun adminSuppliersApi(client: okhttp3.OkHttpClient): AdminSuppliersApi = Retrofit.Builder().baseUrl(com.everybuy.mobile.BuildConfig.API_BASE_URL).client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(AdminSuppliersApi::class.java)
+    @Provides @Singleton fun profileApi(client: okhttp3.OkHttpClient): ProfileApi = Retrofit.Builder().baseUrl(com.everybuy.mobile.BuildConfig.API_BASE_URL).client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(ProfileApi::class.java)
 }
 
 sealed interface AuthState {
@@ -223,7 +315,7 @@ sealed interface AuthState {
     suspend fun restore(): AuthState = try {
         val payload = api.getSession()
         if (payload == null || payload is kotlinx.serialization.json.JsonNull) { jar.clear(); AuthState.SignedOut }
-        else { val parsed = json.decodeFromJsonElement<SessionPayload>(payload); resolveStaff(parsed.user) }
+        else { val parsed = json.decodeFromJsonElement(SessionPayload.serializer(), payload); resolveStaff(parsed.user) }
     } catch (e: java.io.IOException) { AuthState.Error("Can’t connect. Your saved session is still available to retry.", retrySession = true) }
       catch (e: retrofit2.HttpException) { AuthState.Error("Session check failed (${e.code()}). Retry when the service is available.", retrySession = true) }
       catch (e: kotlinx.coroutines.CancellationException) { throw e }
@@ -256,5 +348,20 @@ sealed interface AuthState {
     suspend fun signOut() {
         try { api.signOut() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { }
         finally { jar.clear() }
+    }
+
+    /** Better Auth always answers 200 so callers must not reveal whether the account exists. */
+    suspend fun requestPasswordReset(email: String, redirectTo: String) {
+        api.requestPasswordReset(PasswordResetInput(email, redirectTo).toJson())
+    }
+
+    suspend fun resetPassword(token: String, newPassword: String) {
+        api.resetPassword(ResetPasswordInput(token, newPassword).toJson())
+    }
+
+    suspend fun previewInvitation(token: String): InvitePreviewDto = api.invitePreview(token)
+
+    suspend fun acceptInvitation(token: String, password: String) {
+        api.acceptInvite(AcceptInviteInput(token, password).toJson())
     }
 }

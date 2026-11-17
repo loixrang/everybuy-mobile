@@ -18,3 +18,7 @@ fun formatNaira(amount: String): String = runCatching { nairaFormatter.format(Bi
 fun formatLagosDateTime(isoDateTime: String): String = runCatching {
     DateTimeFormatter.ofPattern("d MMM, h:mm a", Locale("en", "NG")).withZone(ZoneId.of("Africa/Lagos")).format(Instant.parse(isoDateTime))
 }.getOrDefault(isoDateTime)
+
+fun formatLagosDate(isoDateTime: String): String = runCatching {
+    DateTimeFormatter.ofPattern("d MMM yyyy", Locale("en", "NG")).withZone(ZoneId.of("Africa/Lagos")).format(Instant.parse(isoDateTime))
+}.getOrDefault(isoDateTime)

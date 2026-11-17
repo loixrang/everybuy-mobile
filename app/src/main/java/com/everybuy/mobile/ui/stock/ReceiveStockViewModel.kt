@@ -38,13 +38,20 @@ sealed interface ReceiveStockState {
         _state.value = ReceiveStockState.Loading
         try {
             val products = repository.products().filter { it.active }
-            val suppliers = try { repository.suppliers() } catch (e: CancellationException) { throw e } catch (_: Exception) { emptyList() }
-            val initialId = initialProductId?.takeIf { id -> products.any { it.id == id } } ?: products.firstOrNull()?.id.orEmpty()
-            _state.value = ReceiveStockState.Ready(products, suppliers, null, ReceiveStockDraft(productId = initialId))
-            if (suppliers.isEmpty()) {
-                val current = _state.value as ReceiveStockState.Ready
-                _state.value = current.copy(suppliersWarning = "The supplier list is unavailable. You can still record this receipt without a supplier.")
+            var suppliersWarning: String? = null
+            val suppliers = try { repository.suppliers() }
+            catch (e: CancellationException) { throw e }
+            catch (e: retrofit2.HttpException) {
+                if (e.code() == 401) { _state.value = ReceiveStockState.SessionExpired; return@launch }
+                suppliersWarning = "The supplier list could not be loaded. You can still record the receipt without a supplier."
+                emptyList()
             }
+            catch (_: Exception) {
+                suppliersWarning = "The supplier list could not be loaded. You can still record the receipt without a supplier."
+                emptyList()
+            }
+            val initialId = initialProductId?.takeIf { id -> products.any { it.id == id } } ?: products.firstOrNull()?.id.orEmpty()
+            _state.value = ReceiveStockState.Ready(products, suppliers, suppliersWarning, ReceiveStockDraft(productId = initialId))
         } catch (e: CancellationException) { throw e }
         catch (e: retrofit2.HttpException) { _state.value = if (e.code() == 401) ReceiveStockState.SessionExpired else ReceiveStockState.Failed("Products could not be loaded (${e.code()}).") }
         catch (e: java.io.IOException) { _state.value = ReceiveStockState.Failed("Couldn’t connect. Check your internet and retry.") }
@@ -62,7 +69,7 @@ sealed interface ReceiveStockState {
         if (errors.isNotEmpty() || quantity == null || product == null) { _state.value = current.copy(errors = errors); return@launch }
         val cost = current.draft.unitCost.trim()
         val payloadKey = listOf(product.id, quantity.totalPacks, cost, current.draft.supplierId ?: "").joinToString("|")
-        val requestId = if (payloadKey == lastPayloadKey) lastRequestId!! else UUID.randomUUID().toString().also { lastPayloadKey = payloadKey; lastRequestId = it }
+        val requestId = lastRequestId.takeIf { payloadKey == lastPayloadKey } ?: UUID.randomUUID().toString().also { lastPayloadKey = payloadKey; lastRequestId = it }
         _state.value = current.copy(saving = true, errors = emptyMap(), error = null)
         try {
             val result = repository.receive(StockAdditionMutation(requestId, product.id, quantity.totalPacks, cost, current.draft.supplierId))
@@ -84,7 +91,7 @@ sealed interface ReceiveStockState {
     }
 
     fun receiveAnother() {
-        val current = _state.value as? ReceiveStockState.Success ?: return
+        if (_state.value !is ReceiveStockState.Success) return
         lastPayloadKey = null
         lastRequestId = null
         viewModelScope.launch { load(null) }

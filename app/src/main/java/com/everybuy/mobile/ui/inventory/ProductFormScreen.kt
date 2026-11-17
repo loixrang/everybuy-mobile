@@ -1,6 +1,7 @@
 package com.everybuy.mobile.ui.inventory
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,12 +60,12 @@ private val packNames = listOf("Small Pack", "Twin Pack", "Jumbo Pack", "Wipes",
                 TextButton(onClick = { viewModel.load(id) }) { Text("Retry") }
             }
             is ProductFormState.Saved -> Unit
-            is ProductFormState.Ready -> ProductFormContent(current, viewModel, id, Modifier.fillMaxSize().padding(insets))
+            is ProductFormState.Ready -> ProductFormContent(current, viewModel, id, onBack, Modifier.fillMaxSize().padding(insets))
         }
     }
 }
 
-@Composable private fun ProductFormContent(state: ProductFormState.Ready, viewModel: ProductFormViewModel, id: String?, modifier: Modifier) {
+@Composable private fun ProductFormContent(state: ProductFormState.Ready, viewModel: ProductFormViewModel, id: String?, onBack: () -> Unit, modifier: Modifier) {
     val d = state.draft
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(if (state.editing) "Update product details" else "Define the pack and bag units before receiving stock.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -115,7 +116,7 @@ private val packNames = listOf("Small Pack", "Twin Pack", "Jumbo Pack", "Wipes",
 @Composable private fun ProductChoice(label: String, options: List<Pair<String, String>>, selected: String, error: String?, onSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val value = options.firstOrNull { it.first == selected }?.second ?: "Choose $label"
-    androidx.compose.material3.Box {
+    Box {
         OutlinedTextField(value = value, onValueChange = {}, modifier = Modifier.fillMaxWidth().clickable { expanded = true }, label = { Text(label) }, readOnly = true, singleLine = true, isError = error != null, supportingText = if (error == null) null else { { Text(error) } })
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { (id, name) -> DropdownMenuItem(text = { Text(name) }, onClick = { onSelected(id); expanded = false }) }
