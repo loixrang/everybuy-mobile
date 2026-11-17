@@ -1,0 +1,229 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build, sign and publish APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+
+      - name: Ensure release tag is reachable from master
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin master:refs/remotes/origin/master
+          TAG_SHA="$(git rev-list -n 1 "$TAG")"
+          MASTER_SHA="$(git rev-parse origin/master)"
+          echo "Tag $TAG → $TAG_SHA"
+          echo "origin/master → $MASTER_SHA"
+          if ! git merge-base --is-ancestor "$TAG_SHA" origin/master; then
+            echo "::error::Release tag commit is not reachable from origin/master. Refusing to build."
+            echo "Publish releases only from commits that are on master (merge first if needed)."
+            exit 1
+          fi
+          echo "Tag is an ancestor of origin/master."
+
+      - name: Require Android signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [[ -z "${ANDROID_KEYSTORE_BASE64}" ]] && missing+=("ANDROID_KEYSTORE_BASE64")
+          [[ -z "${ANDROID_KEYSTORE_PASSWORD}" ]] && missing+=("ANDROID_KEYSTORE_PASSWORD")
+          [[ -z "${ANDROID_KEY_ALIAS}" ]] && missing+=("ANDROID_KEY_ALIAS")
+          [[ -z "${ANDROID_KEY_PASSWORD}" ]] && missing+=("ANDROID_KEY_PASSWORD")
+          if ((${#missing[@]} > 0)); then
+            echo "::error::Missing required repository secrets: ${missing[*]}"
+            echo "Configure these under Settings → Secrets and variables → Actions before publishing a release."
+            echo "See README.md → Publishing releases for setup steps. An unsigned APK will not be published."
+            exit 1
+          fi
+
+      - name: Derive Android version from tag
+        id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/version-from-tag.sh
+          eval "$(.github/scripts/version-from-tag.sh "$TAG")"
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "Using versionName=$VERSION_NAME versionCode=$VERSION_CODE"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-37 build-tools;35.0.0
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+          validate-wrappers: true
+
+      - name: Decode release keystore
+        id: keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          KEYSTORE_PATH="${RUNNER_TEMP}/everybuy-release.jks"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+          if [[ ! -s "$KEYSTORE_PATH" ]]; then
+            echo "::error::Decoded keystore is empty. Check ANDROID_KEYSTORE_BASE64."
+            exit 1
+          fi
+          chmod 600 "$KEYSTORE_PATH"
+          echo "path=$KEYSTORE_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Run unit tests
+        run: ./gradlew --no-daemon --stacktrace testDebugUnitTest
+
+      - name: Build signed release APKs
+        env:
+          EVERYBUY_STORE_FILE: ${{ steps.keystore.outputs.path }}
+          EVERYBUY_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          EVERYBUY_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          EVERYBUY_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --stacktrace :app:assembleRelease \
+            -Peverybuy.versionName="${{ steps.version.outputs.VERSION_NAME }}" \
+            -Peverybuy.versionCode="${{ steps.version.outputs.VERSION_CODE }}"
+
+      - name: Collect and validate APKs
+        id: apks
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          VERSION_NAME: ${{ steps.version.outputs.VERSION_NAME }}
+        run: |
+          set -euo pipefail
+          DIST="${RUNNER_TEMP}/dist"
+          mkdir -p "$DIST"
+          mapfile -t APKS < <(find app/build/outputs/apk/release -type f -name '*.apk' | sort)
+          if ((${#APKS[@]} == 0)); then
+            echo "::error::No release APKs were produced."
+            exit 1
+          fi
+
+          UNIVERSAL=""
+          ASSET_LIST=()
+          for apk in "${APKS[@]}"; do
+            size="$(stat -c%s "$apk")"
+            if (( size < 1000 )); then
+              echo "::error::APK is empty or too small: $apk ($size bytes)"
+              exit 1
+            fi
+            base="$(basename "$apk")"
+            # Expected patterns: app-universal-release.apk, app-arm64-v8a-release.apk, ...
+            if [[ "$base" == *universal* ]]; then
+              dest="$DIST/everybuy-${TAG}-universal.apk"
+              UNIVERSAL="$dest"
+            elif [[ "$base" =~ app-(armeabi-v7a|arm64-v8a|x86_64|x86)-release\.apk ]]; then
+              abi="${BASH_REMATCH[1]}"
+              dest="$DIST/everybuy-${TAG}-${abi}.apk"
+            else
+              dest="$DIST/everybuy-${TAG}-${base}"
+            fi
+            cp -f "$apk" "$dest"
+            ASSET_LIST+=("$dest")
+            echo "Prepared $dest ($size bytes)"
+          done
+
+          if [[ -z "$UNIVERSAL" || ! -s "$UNIVERSAL" ]]; then
+            echo "::error::Universal release APK was not found. Refusing to publish."
+            printf '%s\n' "${APKS[@]}"
+            exit 1
+          fi
+
+          # Prefer apksigner when build-tools are on PATH; fall back to jarsigner.
+          if command -v apksigner >/dev/null 2>&1; then
+            apksigner verify --print-certs "$UNIVERSAL"
+          else
+            BUILD_TOOLS="$(ls -d "${ANDROID_SDK_ROOT:-$ANDROID_HOME}"/build-tools/* | sort -V | tail -n1)"
+            if [[ -x "$BUILD_TOOLS/apksigner" ]]; then
+              "$BUILD_TOOLS/apksigner" verify --print-certs "$UNIVERSAL"
+            else
+              jarsigner -verify -verbose -certs "$UNIVERSAL" | tee /tmp/jarsigner-out.txt
+              if grep -qi 'jar is unsigned\|no manifest' /tmp/jarsigner-out.txt; then
+                echo "::error::Release APK is unsigned. Check signing secrets and Gradle signingConfig."
+                exit 1
+              fi
+            fi
+          fi
+
+          {
+            echo "universal=$UNIVERSAL"
+            echo "dir=$DIST"
+          } >> "$GITHUB_OUTPUT"
+          printf 'Prepared %s APK asset(s)\n' "${#ASSET_LIST[@]}"
+
+      - name: Build release changelog asset
+        id: changelog
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          VERSION_NAME: ${{ steps.version.outputs.VERSION_NAME }}
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/extract-changelog.sh
+          OUT="${{ steps.apks.outputs.dir }}/CHANGELOG-${TAG}.md"
+          .github/scripts/extract-changelog.sh "$VERSION_NAME" "$TAG" "$OUT"
+          echo "path=$OUT" >> "$GITHUB_OUTPUT"
+
+      - name: Upload assets and update release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+          CHANGELOG_PATH: ${{ steps.changelog.outputs.path }}
+          DIST_DIR: ${{ steps.apks.outputs.dir }}
+        run: |
+          set -euo pipefail
+          mapfile -t FILES < <(find "$DIST_DIR" -maxdepth 1 -type f \( -name '*.apk' -o -name 'CHANGELOG-*.md' \) | sort)
+          if ((${#FILES[@]} == 0)); then
+            echo "::error::No assets to upload."
+            exit 1
+          fi
+          gh release upload "$TAG" "${FILES[@]}" --clobber
+          gh release edit "$TAG" --notes-file "$CHANGELOG_PATH"
+          echo "Uploaded:"
+          printf ' - %s\n' "${FILES[@]}"
+
+      - name: Clean up keystore
+        if: always()
+        env:
+          KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${KEYSTORE_PATH:-}" && -f "$KEYSTORE_PATH" ]]; then
+            shred -u "$KEYSTORE_PATH" 2>/dev/null || rm -f "$KEYSTORE_PATH"
+          fi
+          rm -rf "${RUNNER_TEMP}/dist" 2>/dev/null || true
