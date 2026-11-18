@@ -93,33 +93,33 @@ data class SupplierInput(val name: String, val phone: String?, val active: Boole
 }
 
 interface AdminSettingsApi {
-    @retrofit2.http.GET("api/v1/settings/shop") suspend fun shop(): ShopSettingsDto
-    @retrofit2.http.PATCH("api/v1/settings/shop/{id}") suspend fun updateShop(@retrofit2.http.Path("id") id: String, @retrofit2.http.Body body: JsonObject): ShopSettingsDto
+    @retrofit2.http.GET("settings/shop") suspend fun shop(): ShopSettingsDto
+    @retrofit2.http.PATCH("settings/shop/{id}") suspend fun updateShop(@retrofit2.http.Path("id") id: String, @retrofit2.http.Body body: JsonObject): ShopSettingsDto
 }
 
 interface AdminStaffApi {
-    @retrofit2.http.GET("api/v1/staff") suspend fun staff(): List<StaffMemberDto>
-    @retrofit2.http.PATCH("api/v1/staff/{staffId}") suspend fun update(@retrofit2.http.Path("staffId") staffId: String, @retrofit2.http.Body body: JsonObject): List<StaffMemberDto>
-    @retrofit2.http.GET("api/v1/staff/invitations") suspend fun invitations(): List<StaffInvitationDto>
-    @retrofit2.http.POST("api/v1/staff/invite") suspend fun invite(@retrofit2.http.Body body: JsonObject): InviteStaffResultDto
-    @retrofit2.http.DELETE("api/v1/staff/invitations/{id}") suspend fun revoke(@retrofit2.http.Path("id") id: String): StaffInvitationDto
+    @retrofit2.http.GET("staff") suspend fun staff(): List<StaffMemberDto>
+    @retrofit2.http.PATCH("staff/{staffId}") suspend fun update(@retrofit2.http.Path("staffId") staffId: String, @retrofit2.http.Body body: JsonObject): List<StaffMemberDto>
+    @retrofit2.http.GET("staff/invitations") suspend fun invitations(): List<StaffInvitationDto>
+    @retrofit2.http.POST("staff/invite") suspend fun invite(@retrofit2.http.Body body: JsonObject): InviteStaffResultDto
+    @retrofit2.http.DELETE("staff/invitations/{id}") suspend fun revoke(@retrofit2.http.Path("id") id: String): StaffInvitationDto
 }
 
 interface AdminCatalogApi {
-    @retrofit2.http.POST("api/v1/categories") suspend fun createCategory(@retrofit2.http.Body body: JsonObject): CategoryDto
-    @retrofit2.http.PATCH("api/v1/categories/{id}") suspend fun updateCategory(@retrofit2.http.Path("id") id: String, @retrofit2.http.Body body: JsonObject): CategoryDto
-    @retrofit2.http.POST("api/v1/brands") suspend fun createBrand(@retrofit2.http.Body body: JsonObject): BrandDto
-    @retrofit2.http.PATCH("api/v1/brands/{id}") suspend fun updateBrand(@retrofit2.http.Path("id") id: String, @retrofit2.http.Body body: JsonObject): BrandDto
+    @retrofit2.http.POST("categories") suspend fun createCategory(@retrofit2.http.Body body: JsonObject): CategoryDto
+    @retrofit2.http.PATCH("categories/{id}") suspend fun updateCategory(@retrofit2.http.Path("id") id: String, @retrofit2.http.Body body: JsonObject): CategoryDto
+    @retrofit2.http.POST("brands") suspend fun createBrand(@retrofit2.http.Body body: JsonObject): BrandDto
+    @retrofit2.http.PATCH("brands/{id}") suspend fun updateBrand(@retrofit2.http.Path("id") id: String, @retrofit2.http.Body body: JsonObject): BrandDto
 }
 
 interface AdminSuppliersApi {
-    @retrofit2.http.GET("api/v1/suppliers") suspend fun list(): List<SupplierDto>
-    @retrofit2.http.POST("api/v1/suppliers/add") suspend fun create(@retrofit2.http.Body body: JsonObject): SupplierDto
-    @retrofit2.http.PATCH("api/v1/suppliers/update/{id}") suspend fun update(@retrofit2.http.Path("id") id: Int, @retrofit2.http.Body body: JsonObject): SupplierDto
+    @retrofit2.http.GET("suppliers") suspend fun list(): List<SupplierDto>
+    @retrofit2.http.POST("suppliers/add") suspend fun create(@retrofit2.http.Body body: JsonObject): SupplierDto
+    @retrofit2.http.PATCH("suppliers/update/{id}") suspend fun update(@retrofit2.http.Path("id") id: Int, @retrofit2.http.Body body: JsonObject): SupplierDto
 }
 
 interface ProfileApi {
-    @retrofit2.http.PATCH("api/v1/me") suspend fun updateName(@retrofit2.http.Body body: JsonObject): JsonObject
+    @retrofit2.http.PATCH("me") suspend fun updateName(@retrofit2.http.Body body: JsonObject): JsonObject
 }
 
 @Singleton class AdminRepository @Inject constructor(

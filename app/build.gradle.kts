@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -9,30 +7,7 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-val localProps = Properties().apply {
-    val f = rootProject.file("local.properties")
-    if (f.exists()) f.inputStream().use { load(it) }
-}
-
-fun prop(name: String, fallback: String): String =
-    (findProperty(name) as String?) ?: localProps.getProperty(name) ?: fallback
-
-/**
- * Retrofit paths are rooted at `api/v1/...`, so [API_BASE_URL] is the server origin
- * with a trailing slash (for example `http://10.0.2.2:3000/`). The effective API root
- * is therefore `{API_BASE_URL}api/v1` (emulator default: `http://10.0.2.2:3000/api/v1`).
- *
- * Override debug with `everybuy.apiBaseUrl` (physical devices need the host LAN IP).
- * Override release with `everybuy.apiBaseUrlRelease`.
- */
-fun apiBaseUrl(raw: String): String {
-    val trimmed = raw.trim().trimEnd('/')
-    require(trimmed.isNotEmpty()) { "API base URL must not be empty" }
-    return "$trimmed/"
-}
-
-val debugApiBaseUrl = apiBaseUrl(prop("everybuy.apiBaseUrl", "http://10.0.2.2:3000"))
-val releaseApiBaseUrl = apiBaseUrl(prop("everybuy.apiBaseUrlRelease", "https://api.everybuy.app"))
+val productionApiBaseUrl = "https://api.everybuy.loixrang.com/api/v1/"
 val versionCodeProperty = providers.gradleProperty("everybuy.versionCode").orNull
 val appVersionCode = versionCodeProperty?.toIntOrNull()
     ?: if (versionCodeProperty == null) 1 else error("everybuy.versionCode must be an integer")
@@ -85,6 +60,7 @@ android {
         versionCode = appVersionCode
         versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "API_BASE_URL", "\"$productionApiBaseUrl\"")
     }
 
     signingConfigs {
@@ -111,8 +87,6 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             isMinifyEnabled = false
-            // Emulator → host loopback. Physical device: set everybuy.apiBaseUrl in local.properties.
-            buildConfigField("String", "API_BASE_URL", "\"$debugApiBaseUrl\"")
         }
         release {
             isMinifyEnabled = true
@@ -121,8 +95,6 @@ android {
                 signingConfig = signingConfigs.getByName("release")
             }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Existing production API origin from the Android project release config.
-            buildConfigField("String", "API_BASE_URL", "\"$releaseApiBaseUrl\"")
         }
     }
 

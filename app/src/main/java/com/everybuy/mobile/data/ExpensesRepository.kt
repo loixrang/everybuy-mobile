@@ -37,8 +37,8 @@ data class CreateExpenseInput(
 }
 
 interface ExpensesApi {
-    @retrofit2.http.GET("api/v1/expenses") suspend fun expenses(): List<ExpenseDto>
-    @retrofit2.http.POST("api/v1/expenses") suspend fun create(@retrofit2.http.Body body: JsonObject): ExpenseDto
+    @retrofit2.http.GET("expenses") suspend fun expenses(): List<ExpenseDto>
+    @retrofit2.http.POST("expenses") suspend fun create(@retrofit2.http.Body body: JsonObject): ExpenseDto
 }
 
 @Singleton class ExpensesRepository @Inject constructor(private val api: ExpensesApi) {

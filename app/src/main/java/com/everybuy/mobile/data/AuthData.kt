@@ -52,14 +52,14 @@ private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 @Serializable data class StaffProfile(val userId: String, val staffId: String, val name: String, val email: String, val role: String, val active: Boolean)
 
 interface AuthApi {
-    @retrofit2.http.POST("api/v1/auth/sign-in/email") suspend fun signIn(@retrofit2.http.Body body: SignInRequest): SignInPayload
-    @retrofit2.http.GET("api/v1/auth/get-session") suspend fun getSession(): JsonElement?
-    @retrofit2.http.POST("api/v1/auth/sign-out") suspend fun signOut(): JsonElement
-    @retrofit2.http.POST("api/v1/auth/two-factor/verify-totp") suspend fun verifyTotp(@retrofit2.http.Body body: CodeRequest): SignInPayload
-    @retrofit2.http.POST("api/v1/auth/request-password-reset") suspend fun requestPasswordReset(@retrofit2.http.Body body: JsonObject): JsonObject
-    @retrofit2.http.POST("api/v1/auth/reset-password") suspend fun resetPassword(@retrofit2.http.Body body: JsonObject): JsonObject
-    @retrofit2.http.GET("api/v1/staff/invite/preview") suspend fun invitePreview(@retrofit2.http.Query("token") token: String): InvitePreviewDto
-    @retrofit2.http.POST("api/v1/staff/invite/accept") suspend fun acceptInvite(@retrofit2.http.Body body: JsonObject): JsonObject
+    @retrofit2.http.POST("auth/sign-in/email") suspend fun signIn(@retrofit2.http.Body body: SignInRequest): SignInPayload
+    @retrofit2.http.GET("auth/get-session") suspend fun getSession(): JsonElement?
+    @retrofit2.http.POST("auth/sign-out") suspend fun signOut(): JsonElement
+    @retrofit2.http.POST("auth/two-factor/verify-totp") suspend fun verifyTotp(@retrofit2.http.Body body: CodeRequest): SignInPayload
+    @retrofit2.http.POST("auth/request-password-reset") suspend fun requestPasswordReset(@retrofit2.http.Body body: JsonObject): JsonObject
+    @retrofit2.http.POST("auth/reset-password") suspend fun resetPassword(@retrofit2.http.Body body: JsonObject): JsonObject
+    @retrofit2.http.GET("staff/invite/preview") suspend fun invitePreview(@retrofit2.http.Query("token") token: String): InvitePreviewDto
+    @retrofit2.http.POST("staff/invite/accept") suspend fun acceptInvite(@retrofit2.http.Body body: JsonObject): JsonObject
 }
 
 @Serializable data class InvitePreviewDto(val name: String = "", val email: String = "", val expiresAt: String = "")
@@ -95,10 +95,10 @@ data class AcceptInviteInput(val token: String, val password: String) {
 )
 
 interface ProductsApi {
-    @retrofit2.http.GET("api/v1/products") suspend fun products(@retrofit2.http.Query("page") page: Int = 1, @retrofit2.http.Query("limit") limit: Int = 100): List<ProductDto>
-    @retrofit2.http.GET("api/v1/products/{id}") suspend fun product(@retrofit2.http.Path("id") id: String): List<ProductDto>
-    @retrofit2.http.POST("api/v1/products") suspend fun create(@retrofit2.http.Body body: JsonObject): List<ProductDto>
-    @retrofit2.http.PATCH("api/v1/products/{id}") suspend fun update(@retrofit2.http.Path("id") id: String, @retrofit2.http.Body body: JsonObject): List<ProductDto>
+    @retrofit2.http.GET("products") suspend fun products(@retrofit2.http.Query("page") page: Int = 1, @retrofit2.http.Query("limit") limit: Int = 100): List<ProductDto>
+    @retrofit2.http.GET("products/{id}") suspend fun product(@retrofit2.http.Path("id") id: String): List<ProductDto>
+    @retrofit2.http.POST("products") suspend fun create(@retrofit2.http.Body body: JsonObject): List<ProductDto>
+    @retrofit2.http.PATCH("products/{id}") suspend fun update(@retrofit2.http.Path("id") id: String, @retrofit2.http.Body body: JsonObject): List<ProductDto>
 }
 @Serializable data class CategoryDto(val id: String, val name: String, val active: Boolean = true)
 @Serializable data class BrandDto(val id: String, val name: String, val active: Boolean = true)
@@ -122,8 +122,8 @@ data class ProductMutation(
     }
 }
 interface CatalogApi {
-    @retrofit2.http.GET("api/v1/categories") suspend fun categories(): List<CategoryDto>
-    @retrofit2.http.GET("api/v1/brands") suspend fun brands(): List<BrandDto>
+    @retrofit2.http.GET("categories") suspend fun categories(): List<CategoryDto>
+    @retrofit2.http.GET("brands") suspend fun brands(): List<BrandDto>
 }
 
 @Serializable data class OverviewSalesToday(val count: Int = 0, val total: String = "0")
@@ -183,11 +183,11 @@ interface CatalogApi {
 )
 
 interface ReportsApi {
-    @retrofit2.http.GET("api/v1/reports/overview") suspend fun dailyOverview(): DailyOverview
-    @retrofit2.http.GET("api/v1/reports/monthly") suspend fun monthly(@retrofit2.http.Query("month") month: String): MonthlyReportDto
-    @retrofit2.http.GET("api/v1/reports/profit") suspend fun profit(@retrofit2.http.Query("month") month: String): ProfitReportDto
+    @retrofit2.http.GET("reports/overview") suspend fun dailyOverview(): DailyOverview
+    @retrofit2.http.GET("reports/monthly") suspend fun monthly(@retrofit2.http.Query("month") month: String): MonthlyReportDto
+    @retrofit2.http.GET("reports/profit") suspend fun profit(@retrofit2.http.Query("month") month: String): ProfitReportDto
 }
-interface MeApi { @retrofit2.http.GET("api/v1/me") suspend fun me(): List<StaffProfile> }
+interface MeApi { @retrofit2.http.GET("me") suspend fun me(): List<StaffProfile> }
 
 @Serializable data class StockMovementDto(
     val id: String, val productId: String, val type: String, val changePacks: Int,
@@ -199,12 +199,12 @@ interface MeApi { @retrofit2.http.GET("api/v1/me") suspend fun me(): List<StaffP
 @Serializable data class UpdatedProductStockDto(val id: String, val stockPacks: Int)
 @Serializable data class StockMutationResultDto(val updateProduct: List<UpdatedProductStockDto> = emptyList(), val replayed: Boolean = false)
 interface StockApi {
-    @retrofit2.http.GET("api/v1/stock/movements") suspend fun movements(@retrofit2.http.Query("page") page: Int = 1, @retrofit2.http.Query("limit") limit: Int = 50): StockMovementsPageDto
-    @retrofit2.http.GET("api/v1/stock/movements/{id}") suspend fun movement(@retrofit2.http.Path("id") id: String): StockMovementDto
-    @retrofit2.http.POST("api/v1/stock/additions") suspend fun addStock(@retrofit2.http.Body body: JsonObject): StockMutationResultDto
-    @retrofit2.http.POST("api/v1/stock/adjustments") suspend fun adjustStock(@retrofit2.http.Body body: JsonObject): StockMutationResultDto
+    @retrofit2.http.GET("stock/movements") suspend fun movements(@retrofit2.http.Query("page") page: Int = 1, @retrofit2.http.Query("limit") limit: Int = 50): StockMovementsPageDto
+    @retrofit2.http.GET("stock/movements/{id}") suspend fun movement(@retrofit2.http.Path("id") id: String): StockMovementDto
+    @retrofit2.http.POST("stock/additions") suspend fun addStock(@retrofit2.http.Body body: JsonObject): StockMutationResultDto
+    @retrofit2.http.POST("stock/adjustments") suspend fun adjustStock(@retrofit2.http.Body body: JsonObject): StockMutationResultDto
 }
-interface SuppliersApi { @retrofit2.http.GET("api/v1/suppliers") suspend fun suppliers(): List<SupplierDto> }
+interface SuppliersApi { @retrofit2.http.GET("suppliers") suspend fun suppliers(): List<SupplierDto> }
 
 @Singleton
 class EncryptedCookieJar @Inject constructor(@ApplicationContext private val context: Context) : CookieJar {

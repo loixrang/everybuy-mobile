@@ -97,12 +97,12 @@ data class RepaymentInput(val requestId: String, val saleId: String, val amount:
 }
 
 interface CustomersApi {
-    @retrofit2.http.GET("api/v1/customers") suspend fun customers(): List<CustomerListItemDto>
-    @retrofit2.http.GET("api/v1/customers/{id}") suspend fun customer(@retrofit2.http.Path("id") id: String): List<CustomerDto>
-    @retrofit2.http.POST("api/v1/customers") suspend fun create(@retrofit2.http.Body body: JsonObject): List<CustomerDto>
-    @retrofit2.http.PATCH("api/v1/customers/update/{id}") suspend fun update(@retrofit2.http.Path("id") id: String, @retrofit2.http.Body body: JsonObject): List<CustomerDto>
-    @retrofit2.http.GET("api/v1/customers/{id}/statement") suspend fun statement(@retrofit2.http.Path("id") id: String): CustomerStatementDto
-    @retrofit2.http.POST("api/v1/customers/{id}/repayments") suspend fun repay(@retrofit2.http.Path("id") id: String, @retrofit2.http.Body body: JsonObject): RecordRepaymentResultDto
+    @retrofit2.http.GET("customers") suspend fun customers(): List<CustomerListItemDto>
+    @retrofit2.http.GET("customers/{id}") suspend fun customer(@retrofit2.http.Path("id") id: String): List<CustomerDto>
+    @retrofit2.http.POST("customers") suspend fun create(@retrofit2.http.Body body: JsonObject): List<CustomerDto>
+    @retrofit2.http.PATCH("customers/update/{id}") suspend fun update(@retrofit2.http.Path("id") id: String, @retrofit2.http.Body body: JsonObject): List<CustomerDto>
+    @retrofit2.http.GET("customers/{id}/statement") suspend fun statement(@retrofit2.http.Path("id") id: String): CustomerStatementDto
+    @retrofit2.http.POST("customers/{id}/repayments") suspend fun repay(@retrofit2.http.Path("id") id: String, @retrofit2.http.Body body: JsonObject): RecordRepaymentResultDto
 }
 
 @Singleton class CustomersRepository @Inject constructor(private val api: CustomersApi) {

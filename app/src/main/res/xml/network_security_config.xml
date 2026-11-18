@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Release / default: HTTPS only. Cleartext is never permitted here. -->
+<!-- All build variants use HTTPS only. -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>

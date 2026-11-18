@@ -66,30 +66,30 @@ import javax.inject.Singleton
 )
 
 interface StockTakesApi {
-    @retrofit2.http.GET("api/v1/stock-takes") suspend fun list(
+    @retrofit2.http.GET("stock-takes") suspend fun list(
         @retrofit2.http.Query("page") page: Int = 1,
         @retrofit2.http.Query("limit") limit: Int = 20,
     ): StockTakePageDto
 
-    @retrofit2.http.GET("api/v1/stock-takes/{id}") suspend fun detail(
+    @retrofit2.http.GET("stock-takes/{id}") suspend fun detail(
         @retrofit2.http.Path("id") id: String,
     ): StockTakeDetailDto
 
-    @retrofit2.http.POST("api/v1/stock-takes") suspend fun create(
+    @retrofit2.http.POST("stock-takes") suspend fun create(
         @retrofit2.http.Body body: JsonObject,
     ): StockTakeDto
 
-    @retrofit2.http.PATCH("api/v1/stock-takes/{id}/items/{itemId}/count") suspend fun recordCount(
+    @retrofit2.http.PATCH("stock-takes/{id}/items/{itemId}/count") suspend fun recordCount(
         @retrofit2.http.Path("id") id: String,
         @retrofit2.http.Path("itemId") itemId: String,
         @retrofit2.http.Body body: JsonObject,
     ): StockTakeCountResultDto
 
-    @retrofit2.http.POST("api/v1/stock-takes/{id}/finalize") suspend fun finalize(
+    @retrofit2.http.POST("stock-takes/{id}/finalize") suspend fun finalize(
         @retrofit2.http.Path("id") id: String,
     ): StockTakeDto
 
-    @retrofit2.http.POST("api/v1/stock-takes/{id}/cancel") suspend fun cancel(
+    @retrofit2.http.POST("stock-takes/{id}/cancel") suspend fun cancel(
         @retrofit2.http.Path("id") id: String,
     ): StockTakeDto
 }

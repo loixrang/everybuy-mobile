@@ -121,7 +121,7 @@ data class CreateSaleInput(
 }
 
 interface SalesApi {
-    @retrofit2.http.GET("api/v1/sales") suspend fun sales(
+    @retrofit2.http.GET("sales") suspend fun sales(
         @retrofit2.http.Query("page") page: Int = 1,
         @retrofit2.http.Query("limit") limit: Int = 20,
         @retrofit2.http.Query("from") from: String? = null,
@@ -130,14 +130,14 @@ interface SalesApi {
         @retrofit2.http.Query("paymentStatus") paymentStatus: String? = null,
     ): SalesPageDto
 
-    @retrofit2.http.GET("api/v1/sales/summary") suspend fun summary(
+    @retrofit2.http.GET("sales/summary") suspend fun summary(
         @retrofit2.http.Query("from") from: String? = null,
         @retrofit2.http.Query("to") to: String? = null,
     ): SalesSummaryDto
 
-    @retrofit2.http.GET("api/v1/sales/{id}") suspend fun sale(@retrofit2.http.Path("id") id: String): SaleDetailDto
+    @retrofit2.http.GET("sales/{id}") suspend fun sale(@retrofit2.http.Path("id") id: String): SaleDetailDto
 
-    @retrofit2.http.POST("api/v1/sales") suspend fun create(@retrofit2.http.Body body: JsonObject): CreateSaleResultDto
+    @retrofit2.http.POST("sales") suspend fun create(@retrofit2.http.Body body: JsonObject): CreateSaleResultDto
 }
 
 @Singleton class SalesRepository @Inject constructor(private val api: SalesApi) {

@@ -11,10 +11,10 @@ documented Git-history fallback and never includes unrelated **Unreleased** entr
 
 ### Added
 - Native Everybuy Android client covering authentication (email/password, TOTP, session restore, password reset and invite deep links), inventory, stock movements and receiving, stocktakes, sales, customers, reports, expenses, audit and settings.
-- Local NestJS development support for the Android emulator (`10.0.2.2`) and physical devices (LAN IP override), with cleartext HTTP limited to debug builds.
 - GitHub Actions release pipeline that tests, signs and publishes APKs plus release notes when a GitHub Release is published for a commit on the repository default branch.
 
 ### Changed
+- Debug and release builds now use the deployed production API over HTTPS.
 
 ### Fixed
 

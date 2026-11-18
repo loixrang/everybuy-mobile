@@ -44,11 +44,9 @@ See `../AUTH_MIGRATION_NOTES.md` (particularly its endpoint, cookie, Origin and 
 - Password reset requests pass `redirectTo=everybuy://reset-password`; invite acceptance uses `everybuy://invite/accept?token=…`. The manifest registers both deep links. The reset redirect must be trusted by Better Auth, and invite emails only open the app if `STAFF_INVITE_PREVIEW_URL` points at an app link (otherwise they open the web client).
 - Auth recovery source is compiled and unit-tested but not yet verified against a running backend.
 
-## Local API configuration
+## API configuration
 
-`app/build.gradle.kts` reads `everybuy.apiBaseUrl` from Gradle properties or `local.properties`; Retrofit endpoint paths include `api/v1/...`. Thus the emulator API endpoint is `http://10.0.2.2:3000/api/v1`, and the configured base URL is `http://10.0.2.2:3000/` (trailing slash required). Physical devices need a reachable LAN/dev-server host URL, also with a trailing slash. `network_security_config.xml` permits cleartext only for `10.0.2.2`, localhost and `127.0.0.1`; production requires HTTPS.
-
-Release uses `everybuy.apiBaseUrlRelease`, default `https://api.everybuy.app/` (endpoint root includes `/api/v1`). Set another value via Gradle property/local build configuration as needed; the API URL is not a secret. Do not commit machine-specific `local.properties` values.
+All Android variants use the deployed production API over HTTPS. The base URL is centralized in `app/build.gradle.kts`; Retrofit endpoint paths are relative to its `/api/v1/` prefix, including authentication and session APIs. No local backend URL or `local.properties` value is used for backend configuration. The shared network security configuration denies cleartext traffic.
 
 ## Current implementation status
 

@@ -15,7 +15,7 @@ import javax.inject.Singleton
 )
 
 interface AuditApi {
-    @retrofit2.http.GET("api/v1/audit") suspend fun auditLog(): List<AuditEntryDto>
+    @retrofit2.http.GET("audit") suspend fun auditLog(): List<AuditEntryDto>
 }
 
 @Singleton class AuditRepository @Inject constructor(private val api: AuditApi) {

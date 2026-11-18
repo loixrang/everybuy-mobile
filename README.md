@@ -2,70 +2,17 @@
 
 Native Everybuy client built with Kotlin, Jetpack Compose Material 3, Retrofit/OkHttp, Coroutines/Flow, Hilt, DataStore and Navigation Compose. The app is online-only and uses the existing NestJS + Better Auth backend.
 
+## API configuration
+
+Every build variant uses the deployed API base URL `https://api.everybuy.loixrang.com/api/v1/`. It is defined once in `app/build.gradle.kts` and inherited by both debug and release; it is public configuration, not a secret. Retrofit endpoint paths are relative to that `/api/v1/` root, including authentication and session requests. The Android app does not support local backend overrides and does not read a backend URL from `local.properties`.
+
+The shared network security configuration denies cleartext traffic for all variants. The deployed domain uses HTTPS with Android system trust anchors.
+
 ## Local development
 
-### 1. Start the NestJS backend
+Open the `everybuy-mobile` directory in Android Studio, select the **debug** build variant, choose an emulator or device, and run the app. Debug and release connect to the same deployed backend.
 
-From the repository root:
-
-```bash
-cd everybuy-backend
-bun install   # or npm install / yarn, matching the backend docs
-bun run start:dev
-```
-
-The API listens on port `3000` with a global `/api/v1` prefix (auth under `/api/v1/auth`). Keep Better Auth cookie sessions unchanged; the Android client already preserves them via OkHttp’s encrypted cookie jar.
-
-### 2. Run an Android emulator
-
-Start an AVD from Android Studio (**Device Manager → Play**) or:
-
-```bash
-emulator -avd <your_avd_name>
-```
-
-The emulator reaches the host machine at `10.0.2.2`, so the default debug API origin is `http://10.0.2.2:3000/` (effective API root: `http://10.0.2.2:3000/api/v1`).
-
-### 3. Run the app from Android Studio
-
-1. Open the `everybuy-mobile` directory in Android Studio.
-2. Select the **debug** build variant (**Build → Select Build Variant → debug**).
-3. Choose the running emulator (or a device) and press **Run**.
-
-From the CLI:
-
-```bash
-./gradlew :app:installDebug
-```
-
-### 4. Physical device: override the API URL
-
-`10.0.2.2` only works on the emulator. On a physical device, point debug builds at your development machine’s LAN IP (do not commit that IP).
-
-In `local.properties` (gitignored):
-
-```properties
-everybuy.apiBaseUrl=http://192.168.x.x:3000/
-```
-
-Or as a Gradle property:
-
-```bash
-./gradlew :app:installDebug -Peverybuy.apiBaseUrl=http://192.168.x.x:3000/
-```
-
-Use your machine’s real LAN address, keep the trailing slash, and ensure the phone and computer are on the same network. Debug builds allow cleartext HTTP so LAN testing works; release builds do not.
-
-### 5. Debug vs release
-
-| Variant | Default `API_BASE_URL` (server origin) | Cleartext HTTP | How to override |
-| --- | --- | --- | --- |
-| **debug** | `http://10.0.2.2:3000/` | Allowed (debug `network_security_config` only) | `everybuy.apiBaseUrl` in `local.properties` or `-P` |
-| **release** | `https://api.everybuy.app/` | Denied | `everybuy.apiBaseUrlRelease` |
-
-Retrofit reads `BuildConfig.API_BASE_URL` once in `NetworkModule`; endpoint paths already include `api/v1/...`, so the effective API root is `{API_BASE_URL}api/v1`. The local debug URL never ships in release builds because each build type sets its own `buildConfigField`.
-
-In Android Studio, switch variants under **Build → Select Build Variant**. CLI:
+CLI:
 
 ```bash
 ./gradlew :app:assembleDebug
@@ -118,7 +65,7 @@ In the GitHub repository, open **Settings → Secrets and variables → Actions*
 | `ANDROID_KEY_ALIAS` | The existing key alias shown by `keytool -list` |
 | `ANDROID_KEY_PASSWORD` | The existing key password, or the same value as `ANDROID_KEYSTORE_PASSWORD` when they match |
 
-The workflow validates all four secrets, decodes the keystore to a permission-restricted temporary file, and removes it even when a later step fails. It derives the expected certificate fingerprint from the configured alias and refuses to publish APKs signed by a different identity. `local.properties` remains gitignored and optional; CI obtains the Android SDK from the setup action and does not create or depend on `local.properties`.
+The workflow validates all four secrets, decodes the keystore to a permission-restricted temporary file, and removes it even when a later step fails. It derives the expected certificate fingerprint from the configured alias and refuses to publish APKs signed by a different identity. CI uses the same fixed production API configuration from `app/build.gradle.kts`; the backend URL is not a GitHub secret or workflow variable. CI obtains the Android SDK from the setup action and does not create or depend on `local.properties`.
 
 ### Prepare and publish a release
 
