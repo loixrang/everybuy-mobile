@@ -2,12 +2,14 @@ package com.everybuy.mobile.ui.sales
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.everybuy.mobile.core.search.DebouncedFuzzySearch
 import com.everybuy.mobile.core.util.serverMessage
 import com.everybuy.mobile.data.CreateSaleInput
 import com.everybuy.mobile.data.CreateSaleResultDto
 import com.everybuy.mobile.data.CustomerListItemDto
 import com.everybuy.mobile.data.CustomersRepository
 import com.everybuy.mobile.data.ProductDto
+import com.everybuy.mobile.data.ProductInventory
 import com.everybuy.mobile.data.ProductsRepository
 import com.everybuy.mobile.data.SaleLineInput
 import com.everybuy.mobile.data.SalesRepository
@@ -25,10 +27,13 @@ sealed interface RecordSaleState {
     data object Loading : RecordSaleState
     data class Ready(
         val products: List<ProductDto>,
+        val productSearchText: Map<String, String> = emptyMap(),
         val customers: List<CustomerListItemDto>,
         val customerWarning: String? = null,
         val lines: List<SaleLineDraft> = emptyList(),
         val search: String = "",
+        val searchResults: List<ProductDto> = emptyList(),
+        val searching: Boolean = false,
         val customerId: String = "",
         val amountPaid: String = "",
         val method: String = "cash",
@@ -48,20 +53,24 @@ sealed interface RecordSaleState {
 ) : ViewModel() {
     private val _state = MutableStateFlow<RecordSaleState>(RecordSaleState.Loading)
     val state = _state.asStateFlow()
+    private val fuzzySearch = DebouncedFuzzySearch<ProductDto>(viewModelScope)
     private var payloadKey: String? = null
     private var requestId: String? = null
 
     init { load() }
 
     fun load() = viewModelScope.launch {
+        fuzzySearch.cancel()
         _state.value = RecordSaleState.Loading
         try {
             coroutineScope {
-                val products = async { productsRepository.load().products }
+                val products = async { productsRepository.load() }
                 val customers = async { runCatching { customersRepository.active() } }
                 val customerResult = customers.await()
+                val productInventory = products.await()
                 _state.value = RecordSaleState.Ready(
-                    products = products.await(),
+                    products = productInventory.products,
+                    productSearchText = productSearchText(productInventory),
                     customers = customerResult.getOrDefault(emptyList()),
                     customerWarning = if (customerResult.isFailure) "Customers could not be loaded. Cash sales can still be recorded." else null,
                 )
@@ -74,7 +83,32 @@ sealed interface RecordSaleState {
         catch (_: Exception) { RecordSaleState.Failed("The sale screen could not be loaded. Try again.") }
     }
 
-    fun updateSearch(value: String) = updateReady { it.copy(search = value) }
+    fun updateSearch(value: String) {
+        val current = _state.value as? RecordSaleState.Ready ?: return
+        if (value.isBlank()) {
+            fuzzySearch.cancel()
+            _state.value = current.copy(search = value, searchResults = emptyList(), searching = false)
+            return
+        }
+        _state.value = current.copy(search = value, searching = true)
+        fuzzySearch.search(
+            items = current.products.filter { it.active && it.stockPacks > 0 },
+            query = value,
+            searchableText = { product ->
+                listOf(
+                    product.name,
+                    current.productSearchText[product.id].orEmpty(),
+                    product.packName,
+                    product.size.orEmpty(),
+                ).joinToString(" ")
+            },
+        ) { results ->
+            val latest = _state.value as? RecordSaleState.Ready ?: return@search
+            if (latest.products === current.products && latest.search == value) {
+                _state.value = latest.copy(searchResults = results.take(8), searching = false)
+            }
+        }
+    }
 
     fun setCustomer(customerId: String) = updateReady { it.copy(customerId = customerId, error = null) }
 
@@ -181,5 +215,16 @@ sealed interface RecordSaleState {
     private fun updateReady(transform: (RecordSaleState.Ready) -> RecordSaleState.Ready) {
         val current = _state.value as? RecordSaleState.Ready ?: return
         _state.value = transform(current)
+    }
+
+    private fun productSearchText(inventory: ProductInventory): Map<String, String> {
+        val categories = inventory.categories.associate { it.id to it.name }
+        val brands = inventory.brands.associate { it.id to it.name }
+        return inventory.products.associate { product ->
+            product.id to listOf(
+                brands[product.brandId].orEmpty(),
+                categories[product.categoryId].orEmpty(),
+            ).joinToString(" ")
+        }
     }
 }

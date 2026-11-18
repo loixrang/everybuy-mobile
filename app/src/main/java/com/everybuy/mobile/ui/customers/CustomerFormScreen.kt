@@ -1,19 +1,21 @@
 package com.everybuy.mobile.ui.customers
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,7 +61,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
     }) { insets ->
         when (val current = state) {
             CustomerFormState.Loading -> Column(Modifier.fillMaxSize().padding(insets), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator()
+                ExpressiveLoadingIndicator()
                 Text("Loading customer…", Modifier.padding(top = 12.dp))
             }
             is CustomerFormState.Failed -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -80,7 +82,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
     modifier: Modifier = Modifier,
 ) {
     val draft = state.draft
-    Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .widthIn(max = 840.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Text(
             if (state.editing) "Update the customer’s contact details and status." else "Customers keep credit sales and later repayments linked to the right person.",
             style = MaterialTheme.typography.bodyLarge,
@@ -138,8 +148,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
             }
         }
         Button(onClick = { viewModel.save(id) }, modifier = Modifier.fillMaxWidth(), enabled = !state.saving) {
-            if (state.saving) CircularProgressIndicator(Modifier.height(18.dp)) else Text(if (state.editing) "Save changes" else "Add customer")
+            if (state.saving) ExpressiveLoadingIndicator(Modifier.height(18.dp)) else Text(if (state.editing) "Save changes" else "Add customer")
         }
         TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Cancel") }
+    }
     }
 }

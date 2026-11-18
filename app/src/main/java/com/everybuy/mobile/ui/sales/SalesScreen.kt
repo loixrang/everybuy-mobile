@@ -1,37 +1,31 @@
 package com.everybuy.mobile.ui.sales
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,20 +33,44 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.everybuy.mobile.R
 import com.everybuy.mobile.core.util.formatLagosDateTime
 import com.everybuy.mobile.core.util.formatNaira
+import com.everybuy.mobile.core.util.matchesSearch
 import com.everybuy.mobile.data.SalesListRowDto
 import com.everybuy.mobile.data.SalesSummaryDto
+import com.everybuy.mobile.ui.components.EmptyPane
+import com.everybuy.mobile.ui.components.ErrorPane
+import com.everybuy.mobile.ui.components.EverybuyScreen
+import com.everybuy.mobile.ui.components.ExpressiveSearchField
+import com.everybuy.mobile.ui.components.LoadingPane
+import com.everybuy.mobile.ui.components.StatTile
+import com.everybuy.mobile.ui.components.TonalBadge
+import com.everybuy.mobile.ui.components.TonalCard
+import com.everybuy.mobile.ui.components.listBottomPadding
+import com.everybuy.mobile.ui.components.rememberGlassStyle
+import dev.chrisbanes.haze.hazeEffect
 
-private val statusFilters = listOf("All" to null, "Paid" to "PAID", "Part paid" to "PARTIAL", "Unpaid" to "UNPAID")
+private val statusFilters = listOf(
+    R.string.sales_filter_all to null,
+    R.string.sales_filter_paid to "PAID",
+    R.string.sales_filter_part_paid to "PARTIAL",
+    R.string.sales_filter_unpaid to "UNPAID",
+)
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable fun SalesScreen(
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun SalesScreen(
+    userName: String,
     onOpenSale: (String) -> Unit,
     onRecordSale: () -> Unit,
+    onOpenSettings: () -> Unit,
     onSessionExpired: () -> Unit,
     viewModel: SalesViewModel = hiltViewModel(),
 ) {
@@ -63,63 +81,189 @@ private val statusFilters = listOf("All" to null, "Paid" to "PAID", "Part paid" 
     var to by rememberSaveable { mutableStateOf("") }
     var dateError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(state) { if (state is SalesState.SessionExpired) onSessionExpired() }
-    Scaffold(topBar = {
-        TopAppBar(title = { Column { Text("Sales"); Text("Shop sales, payments and balances", style = MaterialTheme.typography.labelMedium) } }, actions = {
-            IconButton(onClick = { viewModel.refresh() }) { Icon(Icons.Rounded.Refresh, contentDescription = "Refresh sales") }
-        })
-    }, floatingActionButton = {
-        Button(onClick = onRecordSale) {
-            Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
-            Text("Record sale")
-        }
-    }) { insets ->
+    EverybuyScreen(
+        title = stringResource(R.string.sales_title),
+        subtitle = userName,
+        onOpenSettings = onOpenSettings,
+        onRefresh = { viewModel.refresh() },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onRecordSale,
+                icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
+                text = { Text(stringResource(R.string.sales_record_sale)) },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        },
+    ) { padding ->
         when (val current = state) {
-            SalesState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                CircularProgressIndicator()
-                Text("Loading sales…", Modifier.padding(top = 12.dp))
-            }
-            SalesState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
-            is SalesState.Failed -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(current.message, color = MaterialTheme.colorScheme.error)
-                TextButton(onClick = { viewModel.refresh() }) { Text("Retry") }
-            }
-            is SalesState.Ready -> Column(Modifier.fillMaxSize().padding(insets).padding(horizontal = 16.dp)) {
-                SummaryCards(current.summary, current.summaryError)
-                OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth().padding(top = 8.dp), label = { Text("Search sale number or customer") }, singleLine = true)
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
-                    items(statusFilters, key = { it.first }) { (label, value) ->
-                        FilterChip(selected = status == value, onClick = { status = value }, label = { Text(label) })
+            SalesState.Loading -> LoadingPane(
+                stringResource(R.string.sales_loading),
+                Modifier.padding(top = padding.calculateTopPadding()),
+            )
+            SalesState.SessionExpired -> ErrorPane(
+                stringResource(R.string.session_expired),
+                null,
+                Modifier.padding(top = padding.calculateTopPadding()),
+            )
+            is SalesState.Failed -> ErrorPane(
+                current.message,
+                { viewModel.refresh() },
+                Modifier.padding(top = padding.calculateTopPadding()),
+            )
+            is SalesState.Ready -> {
+                val filteredRows by remember(current.rows, query) {
+                    derivedStateOf {
+                        current.rows.filter { row ->
+                            matchesSearch(
+                                listOf(
+                                    row.id,
+                                    row.reference,
+                                    row.createdAt,
+                                    row.customer?.id.orEmpty(),
+                                    row.customer?.name.orEmpty(),
+                                    row.itemsTotal,
+                                    row.amountPaid,
+                                    row.balance,
+                                    row.status,
+                                ).joinToString(" "),
+                                query,
+                            )
+                        }
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(from, { from = it }, Modifier.weight(1f), label = { Text("From") }, placeholder = { Text("YYYY-MM-DD") }, singleLine = true, isError = dateError != null)
-                    OutlinedTextField(to, { to = it }, Modifier.weight(1f), label = { Text("To") }, placeholder = { Text("YYYY-MM-DD") }, singleLine = true, isError = dateError != null)
-                }
-                dateError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = {
-                        query = ""; status = null; from = ""; to = ""; dateError = null
-                        viewModel.applyFilters(SalesFilters())
-                    }) { Text("Clear") }
-                    Button(onClick = {
-                        dateError = validateDateFilters(from, to)
-                        if (dateError == null) viewModel.applyFilters(SalesFilters(query = query.trim(), paymentStatus = status, from = from.trim().ifBlank { null }, to = to.trim().ifBlank { null }))
-                    }) { Text("Apply filters") }
-                }
-                Text("${current.total} sale${if (current.total == 1) "" else "s"} found", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(vertical = 6.dp))
-                if (current.rows.isEmpty()) {
-                    Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                        Text("No sales found", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("Record a sale or change the filters.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = padding.calculateTopPadding(),
+                        bottom = padding.calculateBottomPadding() + listBottomPadding(extra = 96.dp),
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item {
+                        SummaryCards(current.summary, current.summaryError)
                     }
-                } else {
-                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(current.rows, key = { it.id }) { row -> SaleRowCard(row, { onOpenSale(row.id) }) }
+                    item {
+                        ExpressiveSearchField(
+                            value = query,
+                            onValueChange = { query = it },
+                            placeholder = stringResource(R.string.sales_search),
+                        )
                     }
-                    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { viewModel.loadPage(current.page - 1) }, enabled = current.page > 1) { Text("Previous") }
-                        Text("Page ${current.page} of ${current.totalPages}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        TextButton(onClick = { viewModel.loadPage(current.page + 1) }, enabled = current.page < current.totalPages) { Text("Next") }
+                    item {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(statusFilters, key = { it.first }) { (labelRes, value) ->
+                                val label = stringResource(labelRes)
+                                FilterChip(
+                                    selected = status == value,
+                                    onClick = { status = value },
+                                    label = { Text(label) },
+                                    leadingIcon = if (status == value) {
+                                        { Icon(Icons.Rounded.Check, contentDescription = null) }
+                                    } else null,
+                                )
+                            }
+                        }
+                    }
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.OutlinedTextField(
+                                value = from,
+                                onValueChange = { from = it },
+                                modifier = Modifier.weight(1f),
+                                label = { Text(stringResource(R.string.sales_from)) },
+                                placeholder = { Text(stringResource(R.string.sales_date_hint)) },
+                                singleLine = true,
+                                isError = dateError != null,
+                                shape = MaterialTheme.shapes.large,
+                            )
+                            androidx.compose.material3.OutlinedTextField(
+                                value = to,
+                                onValueChange = { to = it },
+                                modifier = Modifier.weight(1f),
+                                label = { Text(stringResource(R.string.sales_to)) },
+                                placeholder = { Text(stringResource(R.string.sales_date_hint)) },
+                                singleLine = true,
+                                isError = dateError != null,
+                                shape = MaterialTheme.shapes.large,
+                            )
+                        }
+                    }
+                    dateError?.let { error ->
+                        item {
+                            Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    item {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            FilledTonalButton(onClick = {
+                                query = ""
+                                status = null
+                                from = ""
+                                to = ""
+                                dateError = null
+                                viewModel.applyFilters(SalesFilters())
+                            }) { Text(stringResource(R.string.action_clear)) }
+                            Button(onClick = {
+                                dateError = validateDateFilters(from, to)
+                                if (dateError == null) {
+                                    viewModel.applyFilters(
+                                        SalesFilters(
+                                            query = query.trim(),
+                                            paymentStatus = status,
+                                            from = from.trim().ifBlank { null },
+                                            to = to.trim().ifBlank { null },
+                                        ),
+                                    )
+                                }
+                            }) { Text(stringResource(R.string.action_apply_filters)) }
+                        }
+                    }
+                    item {
+                        Text(
+                            text = pluralStringResource(R.plurals.sales_count, current.total, current.total),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (filteredRows.isEmpty()) {
+                        item {
+                            EmptyPane(
+                                title = stringResource(R.string.sales_no_results),
+                                body = stringResource(R.string.sales_no_results_body),
+                            )
+                        }
+                    } else {
+                        items(filteredRows, key = { it.id }) { row ->
+                            SaleRowCard(row) { onOpenSale(row.id) }
+                        }
+                        item {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                FilledTonalButton(
+                                    onClick = { viewModel.loadPage(current.page - 1) },
+                                    enabled = current.page > 1,
+                                ) { Text(stringResource(R.string.action_previous)) }
+                                Text(
+                                    stringResource(R.string.sales_page, current.page, current.totalPages),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                FilledTonalButton(
+                                    onClick = { viewModel.loadPage(current.page + 1) },
+                                    enabled = current.page < current.totalPages,
+                                ) { Text(stringResource(R.string.action_next)) }
+                            }
+                        }
                     }
                 }
             }
@@ -135,52 +279,88 @@ private fun validateDateFilters(from: String, to: String): String? {
     return null
 }
 
-@Composable private fun SummaryCards(summary: SalesSummaryDto?, error: String?) {
+@Composable
+private fun SummaryCards(summary: SalesSummaryDto?, error: String?) {
     if (summary == null) {
-        Text(error ?: "Sales totals are unavailable.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
+        Text(
+            text = error ?: "Sales totals are unavailable.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         return
     }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SummaryCard("Sales", formatNaira(summary.salesTotal), Modifier.weight(1f))
-            SummaryCard("Received", formatNaira(summary.amountPaid), Modifier.weight(1f))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SummaryCard("Outstanding", formatNaira(summary.outstanding), Modifier.weight(1f))
-            SummaryCard("Count", summary.salesCount.toString(), Modifier.weight(1f))
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        StatTile(stringResource(R.string.sales_summary_sales), formatNaira(summary.salesTotal), "", Modifier.fillMaxWidth())
+        StatTile(stringResource(R.string.sales_summary_received), formatNaira(summary.amountPaid), "", Modifier.fillMaxWidth())
+        StatTile(
+            label = stringResource(R.string.sales_summary_outstanding),
+            value = formatNaira(summary.outstanding),
+            supporting = "",
+            modifier = Modifier.fillMaxWidth(),
+            containerColor = if ((summary.outstanding.toBigDecimalOrNull() ?: java.math.BigDecimal.ZERO) > java.math.BigDecimal.ZERO) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.secondaryContainer
+            },
+            contentColor = if ((summary.outstanding.toBigDecimalOrNull() ?: java.math.BigDecimal.ZERO) > java.math.BigDecimal.ZERO) {
+                MaterialTheme.colorScheme.onErrorContainer
+            } else {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            },
+        )
+        StatTile(stringResource(R.string.sales_summary_count), summary.salesCount.toString(), "", Modifier.fillMaxWidth())
     }
 }
 
-@Composable private fun SummaryCard(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
-        }
-    }
-}
-
-@Composable private fun SaleRowCard(row: SalesListRowDto, onOpen: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = onOpen), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-                Column(Modifier.weight(1f)) {
-                    Text(row.reference.ifBlank { "Sale" }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Text(row.customer?.name ?: "Walk-in customer", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+@Composable
+private fun SaleRowCard(row: SalesListRowDto, onOpen: () -> Unit) {
+    TonalCard(Modifier.fillMaxWidth(), onClick = onOpen) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        row.reference.ifBlank { "Sale" },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        "${row.customer?.name ?: stringResource(R.string.sales_walk_in)} · ${formatLagosDateTime(row.createdAt)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
-                PaymentStatusBadge(row.status)
-            }
-            Text(formatLagosDateTime(row.createdAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Total ${formatNaira(row.itemsTotal)}", style = MaterialTheme.typography.bodyMedium)
-                Text("Balance ${formatNaira(row.balance)}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        formatNaira(row.itemsTotal),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                    Text(
+                        stringResource(R.string.sales_balance, formatNaira(row.balance)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                    PaymentStatusBadge(row.status)
+                }
             }
         }
     }
 }
 
-@Composable fun PaymentStatusBadge(status: String) {
+@Composable
+fun PaymentStatusBadge(status: String) {
     val normalised = normalisedPaymentStatus(status)
     val container = when (normalised) {
         "PAID" -> MaterialTheme.colorScheme.primaryContainer
@@ -192,7 +372,9 @@ private fun validateDateFilters(from: String, to: String): String? {
         "PART_PAID" -> MaterialTheme.colorScheme.onTertiaryContainer
         else -> MaterialTheme.colorScheme.onErrorContainer
     }
-    Surface(color = container, contentColor = content, shape = RoundedCornerShape(8.dp)) {
-        Text(paymentStatusLabel(normalised), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
-    }
+    TonalBadge(
+        text = paymentStatusLabel(normalised),
+        containerColor = container,
+        contentColor = content,
+    )
 }

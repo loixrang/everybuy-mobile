@@ -1,11 +1,13 @@
 package com.everybuy.mobile.ui.stock
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -13,7 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,7 +53,7 @@ import com.everybuy.mobile.data.StockMovementDto
     }) { insets ->
         when (val current = state) {
             StockMovementDetailState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                CircularProgressIndicator()
+                ExpressiveLoadingIndicator()
                 Text("Loading movement…", Modifier.padding(top = 12.dp))
             }
             StockMovementDetailState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
@@ -70,11 +72,19 @@ import com.everybuy.mobile.data.StockMovementDto
 
 @Composable private fun MovementDetailContent(movement: StockMovementDto, productName: String?, onProduct: () -> Unit, modifier: Modifier = Modifier) {
     val positive = movement.changePacks > 0
-    Column(modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .widthIn(max = 840.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
         Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = if (positive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)) {
             Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(movementLabel(movement), style = MaterialTheme.typography.titleMedium)
-                Text("${if (positive) "+" else ""}${movement.changePacks} packs", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+                Text("${if (positive) "+" else ""}${movement.changePacks} packs", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold)
                 Text(formatLagosDateTime(movement.createdAt), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -95,6 +105,7 @@ import com.everybuy.mobile.data.StockMovementDto
             }
         }
         Text("Stock balances come from the movement ledger. Staff cannot edit ledger entries directly.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     }
 }
 

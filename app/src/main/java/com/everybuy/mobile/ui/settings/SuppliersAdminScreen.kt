@@ -1,11 +1,14 @@
 package com.everybuy.mobile.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,11 +16,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material3.AlertDialog
+import com.everybuy.mobile.ui.components.GlassAlertDialog as AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -73,23 +76,33 @@ import com.everybuy.mobile.data.SupplierDto
     }) { insets ->
         when (val current = state) {
             SuppliersAdminState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                CircularProgressIndicator()
+                ExpressiveLoadingIndicator()
                 Text("Loading suppliers…", Modifier.padding(top = 12.dp))
             }
             SuppliersAdminState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
             is SuppliersAdminState.Forbidden -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Text(current.message, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(current.message, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
             is SuppliersAdminState.Failed -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 Text(current.message, color = MaterialTheme.colorScheme.error)
                 TextButton(onClick = { viewModel.refresh() }) { Text("Retry") }
             }
-            is SuppliersAdminState.Ready -> Column(Modifier.fillMaxSize().padding(insets).padding(horizontal = 16.dp)) {
+            is SuppliersAdminState.Ready -> Box(
+                Modifier.fillMaxSize().padding(insets),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .widthIn(max = 840.dp)
+                        .padding(horizontal = 16.dp),
+                ) {
                 if (current.notice != null) FeedbackCard(current.notice, false) { viewModel.clearFeedback() }
                 if (current.actionError != null) FeedbackCard(current.actionError, true) { viewModel.clearFeedback() }
                 if (current.suppliers.isEmpty()) {
                     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                        Text("No suppliers yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("No suppliers yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text("Add the first supplier so stock receipts can name who supplied them.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
                     }
                 } else {
@@ -104,6 +117,7 @@ import com.everybuy.mobile.data.SupplierDto
                         }
                         item { Text("", Modifier.padding(bottom = 12.dp)) }
                     }
+                }
                 }
             }
         }
@@ -170,7 +184,7 @@ import com.everybuy.mobile.data.SupplierDto
         },
         confirmButton = {
             Button(onClick = { onConfirm(name, phone) }, enabled = !saving && name.isNotBlank()) {
-                if (saving) CircularProgressIndicator(Modifier.padding(2.dp)) else Text(if (supplier == null) "Add supplier" else "Save supplier")
+                if (saving) ExpressiveLoadingIndicator(Modifier.padding(2.dp)) else Text(if (supplier == null) "Add supplier" else "Save supplier")
             }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !saving) { Text("Cancel") } },

@@ -3,23 +3,26 @@ package com.everybuy.mobile.ui.stocktakes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.AlertDialog
+import com.everybuy.mobile.ui.components.GlassAlertDialog as AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,7 +71,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
     }) { insets ->
         when (val current = state) {
             StockTakeDetailState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                CircularProgressIndicator()
+                ExpressiveLoadingIndicator()
                 Text("Loading stocktake…", Modifier.padding(top = 12.dp))
             }
             StockTakeDetailState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
@@ -113,7 +116,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
                         pendingAction = null
                     },
                 ) {
-                    if (ready?.actionBusy == true) CircularProgressIndicator(Modifier.height(18.dp)) else Text(if (finalize) "Approve stocktake" else "Cancel stocktake")
+                    if (ready?.actionBusy == true) ExpressiveLoadingIndicator(Modifier.height(18.dp)) else Text(if (finalize) "Approve stocktake" else "Cancel stocktake")
                 }
             },
             dismissButton = { TextButton(onClick = { pendingAction = null }, enabled = ready?.actionBusy != true) { Text("Keep stocktake") } },
@@ -144,12 +147,21 @@ import com.everybuy.mobile.data.StockTakeItemDto
     }
     val countingItem = detail.items.firstOrNull { it.id == state.countingItemId }
 
-    LazyColumn(modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp)) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .widthIn(max = 840.dp)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
+    ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                     Column(Modifier.weight(1f)) {
-                        Text(if (draft) "Count stock" else detail.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(if (draft) "Count stock" else detail.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                         Text(detail.reference, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (!draft) Text(detail.createdAt?.let { "Started ${formatLagosDateTime(it)}" } ?: detail.name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -196,7 +208,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), shape = RoundedCornerShape(20.dp)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Stocktake approved", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Stocktake approved", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(detail.finalizedAt?.let { "Stock balances were updated on ${formatLagosDateTime(it)}. Each difference is recorded as an adjustment in the movement ledger." } ?: "Stock balances were updated and the differences were recorded as adjustments.", style = MaterialTheme.typography.bodySmall)
                     }
                 }
@@ -207,7 +219,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Stocktake cancelled", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Stocktake cancelled", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text("No stock balances were changed.", style = MaterialTheme.typography.bodySmall)
                     }
                 }
@@ -223,7 +235,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
                             onClick = onFinalize,
                             enabled = !state.actionBusy && allCounted && unvaluedIncreases.isEmpty(),
                             modifier = Modifier.weight(1f),
-                        ) { if (state.actionBusy) CircularProgressIndicator(Modifier.height(18.dp)) else Text("Approve stocktake") }
+                        ) { if (state.actionBusy) ExpressiveLoadingIndicator(Modifier.height(18.dp)) else Text("Approve stocktake") }
                     }
                     if (!allCounted) Text("Every product must be counted before approval.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (unvaluedIncreases.isNotEmpty()) Text("Record the known acquisition cost for each stock increase before approval.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -234,7 +246,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
         if (detail.items.isEmpty()) {
             item {
                 Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("No products in this stocktake", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("No products in this stocktake", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text("The stocktake was created when no active products existed. Add a product, then start a new stocktake.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
                 }
             }
@@ -243,6 +255,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
                 StockTakeItemCard(item, draft, currentUserId, onCount)
             }
         }
+    }
     }
 
     if (countingItem != null) {
@@ -337,7 +350,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
                     val message = validateStockTakeCount(bags, loose, item.packsPerBag).message
                     if (message != null) localError = message else { localError = null; onSave(bags, loose) }
                 },
-            ) { if (saving) CircularProgressIndicator(Modifier.height(18.dp)) else Text(if (item.countedPacks == null) "Save count" else "Update count") }
+            ) { if (saving) ExpressiveLoadingIndicator(Modifier.height(18.dp)) else Text(if (item.countedPacks == null) "Save count" else "Update count") }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !saving) { Text("Cancel") } },
     )

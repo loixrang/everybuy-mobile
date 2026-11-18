@@ -43,5 +43,8 @@ interface ExpensesApi {
 
 @Singleton class ExpensesRepository @Inject constructor(private val api: ExpensesApi) {
     suspend fun list(): List<ExpenseDto> = api.expenses()
-    suspend fun create(input: CreateExpenseInput): ExpenseDto = api.create(input.toJson())
+    suspend fun create(input: CreateExpenseInput): ExpenseDto {
+        val body = input.toJson()
+        return withIdempotentReplay { api.create(body) }
+    }
 }

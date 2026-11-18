@@ -1,11 +1,15 @@
 package com.everybuy.mobile.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,14 +17,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material3.AlertDialog
+import com.everybuy.mobile.ui.components.GlassAlertDialog as AlertDialog
+import com.everybuy.mobile.ui.components.GlassModalBottomSheet
+import com.everybuy.mobile.ui.components.SheetHeader
+import com.everybuy.mobile.ui.components.SheetSelectRow
+import kotlinx.coroutines.launch
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -34,13 +43,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.everybuy.mobile.core.util.formatLagosDate
 import com.everybuy.mobile.data.StaffInvitationDto
 import com.everybuy.mobile.data.StaffMemberDto
@@ -78,12 +89,12 @@ import com.everybuy.mobile.data.StaffMemberDto
     }) { insets ->
         when (val current = state) {
             TeamState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                CircularProgressIndicator()
+                ExpressiveLoadingIndicator()
                 Text("Loading team…", Modifier.padding(top = 12.dp))
             }
             TeamState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
             is TeamState.Forbidden -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Text(current.message, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(current.message, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("Ask an owner to manage the team.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
             }
             is TeamState.Failed -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
@@ -152,7 +163,15 @@ import com.everybuy.mobile.data.StaffMemberDto
     onDismissFeedback: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .widthIn(max = 840.dp)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         item {
             Text(
                 "${state.members.count { it.active }} active of ${state.members.size} shop member${if (state.members.size == 1) "" else "s"}",
@@ -194,6 +213,7 @@ import com.everybuy.mobile.data.StaffMemberDto
             }
         }
         item { Text("", modifier = Modifier.padding(bottom = 12.dp)) }
+    }
     }
 }
 
@@ -251,22 +271,47 @@ import com.everybuy.mobile.data.StaffMemberDto
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun ChoiceDialog(title: String, message: String, options: List<String>, current: String, onDismiss: () -> Unit, onSelect: (String) -> Unit) {
-    AlertDialog(
+    val scope = rememberCoroutineScope()
+    val sheetState = androidx.compose.material3.rememberBottomSheetState(
+        initialValue = androidx.compose.material3.SheetValue.Hidden,
+    )
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                options.forEach { option ->
-                    Button(onClick = { onSelect(option) }, enabled = option != current, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (option == current) "$option (current)" else option)
-                    }
+        sheetState = sheetState,
+    ) {
+        Column(
+            Modifier.fillMaxWidth().heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.7f),
+        ) {
+            SheetHeader(title, onClose = {
+                scope.launch {
+                    sheetState.hide()
+                    onDismiss()
+                }
+            })
+            Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+            options.forEachIndexed { index, option ->
+                SheetSelectRow(
+                    label = option,
+                    sublabel = if (option == current) "Current role" else null,
+                    selected = option == current,
+                    onClick = {
+                        scope.launch {
+                            sheetState.hide()
+                            onSelect(option)
+                        }
+                    },
+                )
+                if (index < options.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    )
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+        }
+    }
 }
 
 @Composable private fun InviteDialog(inviting: Boolean, error: String?, onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {
@@ -285,7 +330,7 @@ import com.everybuy.mobile.data.StaffMemberDto
         },
         confirmButton = {
             Button(onClick = { onConfirm(name, email) }, enabled = !inviting && name.isNotBlank() && email.isNotBlank()) {
-                if (inviting) CircularProgressIndicator(Modifier.padding(2.dp)) else Text("Send invite")
+                if (inviting) ExpressiveLoadingIndicator(Modifier.padding(2.dp)) else Text("Send invite")
             }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !inviting) { Text("Cancel") } },

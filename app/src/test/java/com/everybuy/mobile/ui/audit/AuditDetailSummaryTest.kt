@@ -14,12 +14,12 @@ class AuditDetailSummaryTest {
                 put("amount", "12500.50")
             },
         )
-        assertEquals("Diesel for generator · ₦12,500.50", auditDetailSummary(entry))
+        assertEquals("Diesel for generator · ₦12,500.5", auditDetailSummary(entry))
     }
 
     @Test fun `falls back to the available field`() {
         assertEquals("Transport", auditDetailSummary(AuditEntryDto(detail = buildJsonObject { put("title", "Transport") })))
-        assertEquals("₦1,000.00", auditDetailSummary(AuditEntryDto(detail = buildJsonObject { put("amount", "1000") })))
+        assertEquals("₦1,000", auditDetailSummary(AuditEntryDto(detail = buildJsonObject { put("amount", "1000") })))
     }
 
     @Test fun `handles missing and unrecognised detail`() {

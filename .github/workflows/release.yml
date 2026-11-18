@@ -241,10 +241,10 @@ jobs:
           VERSION_NAME: ${{ steps.version.outputs.VERSION_NAME }}
           PREVIOUS_RELEASE_TAG: ${{ steps.releases.outputs.previous_tag }}
           PUBLISHED_AT: ${{ github.event.release.published_at }}
-          DIST_DIR: ${{ steps.apks.outputs.dir }}
         run: |
           set -euo pipefail
-          OUT="${DIST_DIR}/CHANGELOG-${TAG}.md"
+          mkdir -p "${RUNNER_TEMP}/release-notes"
+          OUT="${RUNNER_TEMP}/release-notes/CHANGELOG-${TAG}.md"
           .github/scripts/extract-changelog.sh \
             "$VERSION_NAME" "$TAG" "$OUT" CHANGELOG.md "$PREVIOUS_RELEASE_TAG" "$PUBLISHED_AT"
           echo "path=$OUT" >> "$GITHUB_OUTPUT"
@@ -261,9 +261,9 @@ jobs:
             echo "::error::Release changelog is missing or empty; refusing to upload release assets."
             exit 1
           fi
-          mapfile -t FILES < <(find "$DIST_DIR" -maxdepth 1 -type f \( -name '*.apk' -o -name 'CHANGELOG-*.md' \) | sort)
+          mapfile -t FILES < <(find "$DIST_DIR" -maxdepth 1 -type f -name '*.apk' | sort)
           if ((${#FILES[@]} == 0)); then
-            echo "::error::No assets to upload."
+            echo "::error::No APKs to upload."
             exit 1
           fi
           gh release upload "$TAG" "${FILES[@]}" --clobber
@@ -280,3 +280,4 @@ jobs:
             shred -u "$KEYSTORE_PATH" 2>/dev/null || rm -f "$KEYSTORE_PATH"
           fi
           rm -rf "${RUNNER_TEMP}/dist" 2>/dev/null || true
+          rm -rf "${RUNNER_TEMP}/release-notes" 2>/dev/null || true

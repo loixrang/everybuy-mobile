@@ -1,6 +1,7 @@
 package com.everybuy.mobile.ui.inventory
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -16,7 +18,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,7 +48,7 @@ import com.everybuy.mobile.data.StockMovementDto
     LaunchedEffect(state) { if (state is ProductDetailState.SessionExpired) onSessionExpired() }
     Scaffold(topBar = { TopAppBar(title = { Text("Product details") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back") } }, actions = { if (isOwner) TextButton(onClick = onEdit) { Text("Edit") } }) }) { insets ->
         when (val current = state) {
-            ProductDetailState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { CircularProgressIndicator(); Text("Loading product…", Modifier.padding(top = 12.dp)) }
+            ProductDetailState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { ExpressiveLoadingIndicator(); Text("Loading product…", Modifier.padding(top = 12.dp)) }
             ProductDetailState.NotFound -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) { Text("Product not found", style = MaterialTheme.typography.titleLarge); TextButton(onClick = onBack) { Text("Back to inventory") } }
             ProductDetailState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
             is ProductDetailState.Failed -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -59,14 +61,21 @@ import com.everybuy.mobile.data.StockMovementDto
 }
 
 @Composable private fun ProductDetailsContent(product: ProductDto, category: String?, brand: String?, recentMovements: List<StockMovementDto>, movementsUnavailable: Boolean, onReceiveStock: () -> Unit, onViewMovements: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp)) {
-        Text(product.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .widthIn(max = 840.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+    ) {
+        Text(product.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text(listOfNotNull(brand, category, product.packName, product.size?.takeIf { it.isNotBlank() }).joinToString(" · "), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
         Spacer(Modifier.height(18.dp))
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(Modifier.padding(20.dp)) {
                 Text("Available stock", style = MaterialTheme.typography.titleMedium)
-                Text("${product.stockPacks} packs", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                Text("${product.stockPacks} packs", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
                 val bags = if (product.packsPerBag > 0) product.stockPacks / product.packsPerBag else 0
                 val loose = if (product.packsPerBag > 0) product.stockPacks % product.packsPerBag else product.stockPacks
                 Text("$bags ${if (bags == 1) "bag" else "bags"} + $loose ${if (loose == 1) "pack" else "packs"}", style = MaterialTheme.typography.bodyMedium)
@@ -117,6 +126,7 @@ import com.everybuy.mobile.data.StockMovementDto
         }
         Spacer(Modifier.height(16.dp))
     }
+    }
 }
 
 @Composable private fun ProductMovementRow(movement: StockMovementDto) {
@@ -138,7 +148,7 @@ import com.everybuy.mobile.data.StockMovementDto
             Text(
                 "${if (positive) "+" else ""}${movement.changePacks} packs",
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = if (positive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             )
         }

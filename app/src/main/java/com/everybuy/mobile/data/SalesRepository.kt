@@ -148,5 +148,8 @@ interface SalesApi {
 
     suspend fun detail(id: String): SaleDetailDto = api.sale(id)
 
-    suspend fun create(input: CreateSaleInput): CreateSaleResultDto = api.create(input.toJson())
+    suspend fun create(input: CreateSaleInput): CreateSaleResultDto {
+        val body = input.toJson()
+        return withIdempotentReplay { api.create(body) }
+    }
 }

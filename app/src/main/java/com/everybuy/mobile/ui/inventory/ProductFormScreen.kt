@@ -9,15 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,15 +31,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.foundation.clickable
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.everybuy.mobile.ui.components.SheetSelect
+import com.everybuy.mobile.ui.components.SheetSelectOption
 
 private val packNames = listOf("Small Pack", "Twin Pack", "Jumbo Pack", "Wipes", "Pad", "Tissue")
 
@@ -54,7 +52,7 @@ private val packNames = listOf("Small Pack", "Twin Pack", "Jumbo Pack", "Wipes",
     }
     Scaffold(topBar = { TopAppBar(title = { Text(if (id == null) "Add product" else "Edit product") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back") } }) }) { insets ->
         when (val current = state) {
-            ProductFormState.Loading -> Column(Modifier.fillMaxSize().padding(insets), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) { CircularProgressIndicator(); Text("Loading product setup…", Modifier.padding(top = 12.dp)) }
+            ProductFormState.Loading -> Column(Modifier.fillMaxSize().padding(insets), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) { ExpressiveLoadingIndicator(); Text("Loading product setup…", Modifier.padding(top = 12.dp)) }
             is ProductFormState.Failed -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(current.message, color = MaterialTheme.colorScheme.error)
                 TextButton(onClick = { viewModel.load(id) }) { Text("Retry") }
@@ -67,7 +65,15 @@ private val packNames = listOf("Small Pack", "Twin Pack", "Jumbo Pack", "Wipes",
 
 @Composable private fun ProductFormContent(state: ProductFormState.Ready, viewModel: ProductFormViewModel, id: String?, onBack: () -> Unit, modifier: Modifier) {
     val d = state.draft
-    Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .widthIn(max = 840.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Text(if (state.editing) "Update product details" else "Define the pack and bag units before receiving stock.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         state.formError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         ProductEntry("Product name", d.name, state.errors["name"], { value -> viewModel.updateDraft { it.copy(name = value) } })
@@ -93,10 +99,11 @@ private val packNames = listOf("Small Pack", "Twin Pack", "Jumbo Pack", "Wipes",
         }
         Spacer(Modifier.height(8.dp))
         Button(onClick = { viewModel.save(id) }, modifier = Modifier.fillMaxWidth(), enabled = !state.saving && state.categories.isNotEmpty() && state.brands.isNotEmpty()) {
-            if (state.saving) CircularProgressIndicator(Modifier.height(18.dp)) else Text(if (state.editing) "Save changes" else "Create product")
+            if (state.saving) ExpressiveLoadingIndicator(Modifier.height(18.dp)) else Text(if (state.editing) "Save changes" else "Create product")
         }
         if (state.categories.isEmpty() || state.brands.isEmpty()) Text("An active brand and category are required. Check the catalog and retry.", color = MaterialTheme.colorScheme.error)
         TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Cancel") }
+    }
     }
 }
 
@@ -114,12 +121,13 @@ private val packNames = listOf("Small Pack", "Twin Pack", "Jumbo Pack", "Wipes",
 }
 
 @Composable private fun ProductChoice(label: String, options: List<Pair<String, String>>, selected: String, error: String?, onSelected: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val value = options.firstOrNull { it.first == selected }?.second ?: "Choose $label"
-    Box {
-        OutlinedTextField(value = value, onValueChange = {}, modifier = Modifier.fillMaxWidth().clickable { expanded = true }, label = { Text(label) }, readOnly = true, singleLine = true, isError = error != null, supportingText = if (error == null) null else { { Text(error) } })
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { (id, name) -> DropdownMenuItem(text = { Text(name) }, onClick = { onSelected(id); expanded = false }) }
-        }
-    }
+    SheetSelect(
+        label = label,
+        placeholder = "Choose $label",
+        options = options.map { (id, name) -> SheetSelectOption(id, id, name) },
+        selected = selected.takeIf(String::isNotBlank),
+        onSelect = { value -> value?.let(onSelected) },
+        searchable = options.size >= 8,
+        error = error,
+    )
 }

@@ -114,5 +114,8 @@ interface CustomersApi {
     suspend fun update(id: String, input: UpdateCustomerInput): CustomerDto =
         api.update(id, input.toJson()).firstOrNull() ?: throw IllegalStateException("The server did not return the updated customer.")
     suspend fun statement(id: String): CustomerStatementDto = api.statement(id)
-    suspend fun repay(customerId: String, input: RepaymentInput): RecordRepaymentResultDto = api.repay(customerId, input.toJson())
+    suspend fun repay(customerId: String, input: RepaymentInput): RecordRepaymentResultDto {
+        val body = input.toJson()
+        return withIdempotentReplay { api.repay(customerId, body) }
+    }
 }

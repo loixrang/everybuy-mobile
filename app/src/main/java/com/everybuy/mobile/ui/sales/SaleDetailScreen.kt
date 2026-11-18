@@ -1,11 +1,13 @@
 package com.everybuy.mobile.ui.sales
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -13,7 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,7 +56,7 @@ import com.everybuy.mobile.data.SaleItemDto
     }) { insets ->
         when (val current = state) {
             SaleDetailState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                CircularProgressIndicator()
+                ExpressiveLoadingIndicator()
                 Text("Loading sale…", Modifier.padding(top = 12.dp))
             }
             SaleDetailState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
@@ -74,10 +76,18 @@ import com.everybuy.mobile.data.SaleItemDto
 @Composable private fun SaleDetailContent(sale: SaleDetailDto, customer: CustomerDto?, onCustomerSelected: (String) -> Unit, modifier: Modifier = Modifier) {
     val paid = salePaidTotal(sale)
     val balance = saleBalance(sale)
-    Column(modifier.verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .widthIn(max = 840.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
-                Text(sale.saleNumber.ifBlank { "Sale" }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(sale.saleNumber.ifBlank { "Sale" }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 Text(customer?.name ?: if (sale.customerId == null) "Walk-in customer" else "Customer #${sale.customerId.take(8)}", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(formatLagosDateTime(sale.soldAt), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -89,7 +99,7 @@ import com.everybuy.mobile.data.SaleItemDto
         Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text("Sale total", style = MaterialTheme.typography.titleSmall)
-                Text(formatNaira(sale.itemsTotal), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+                Text(formatNaira(sale.itemsTotal), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Paid"); Text(formatNaira(paid.toPlainString())) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Balance"); Text(formatNaira(balance.toPlainString()), fontWeight = FontWeight.SemiBold) }
             }
@@ -107,6 +117,7 @@ import com.everybuy.mobile.data.SaleItemDto
             }
         }
         Text("Sale ${sale.saleNumber} · Recorded ${formatLagosDateTime(sale.soldAt)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     }
 }
 

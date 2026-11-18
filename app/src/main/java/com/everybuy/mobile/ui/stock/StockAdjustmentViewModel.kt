@@ -58,8 +58,7 @@ class StockAdjustmentViewModel @Inject constructor(private val repository: Stock
         val stableRequestId = requestId ?: UUID.randomUUID().toString().also { requestId = it; payloadKey = key }
         _state.value = StockAdjustmentState.Saving
         try {
-            val result = repository.adjust(StockAdjustmentMutation(stableRequestId, product.id, validQuantity, direction, note))
-            if (result.updateProduct.none { it.id == product.id }) throw IllegalStateException("The server did not return the updated stock balance.")
+            repository.adjust(StockAdjustmentMutation(stableRequestId, product.id, validQuantity, direction, note))
             _state.value = StockAdjustmentState.Saved
         } catch (e: CancellationException) { throw e }
         catch (e: retrofit2.HttpException) {
