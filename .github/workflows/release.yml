@@ -134,6 +134,9 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
+      - name: List available platforms
+        run: sdkmanager --list | grep -E "platforms;android-3[6-9]"
+
       - name: Install Android SDK packages
         run: |
           sdkmanager \
