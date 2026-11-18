@@ -86,7 +86,7 @@ import com.everybuy.mobile.data.StaffMemberDto
             }
             TeamState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
             is TeamState.Forbidden -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Text(current.message, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(current.message, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("Ask an owner to manage the team.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
             }
             is TeamState.Failed -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {

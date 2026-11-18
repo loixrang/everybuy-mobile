@@ -38,6 +38,8 @@
     <string name="action_next">Next</string>
     <string name="action_apply_filters">Apply filters</string>
     <string name="action_sign_out">Sign out</string>
+    <string name="action_close">Close</string>
+    <string name="action_cycle_theme">Cycle theme</string>
     <string name="search_clear">Clear search</string>
     <string name="loading">Loading…</string>
     <string name="session_expired">Your session has expired. Returning to sign in…</string>
@@ -57,12 +59,17 @@
         <item quantity="one">%1$d product</item>
         <item quantity="other">%1$d products</item>
     </plurals>
+    <plurals name="overview_pack_count">
+        <item quantity="one">%d pack</item>
+        <item quantity="other">%d packs</item>
+    </plurals>
     <string name="inventory_packs_in_stock">packs in stock</string>
     <string name="inventory_price_per_bag">%1$s per bag</string>
     <string name="inventory_low_stock">Low stock</string>
 
     <!-- Overview -->
     <string name="overview_title">Overview</string>
+    <string name="overview_subtitle">Your shop at a glance</string>
     <string name="overview_today">Today</string>
     <string name="overview_monthly">Monthly</string>
     <string name="overview_profit">Profit</string>
@@ -74,6 +81,11 @@
     <string name="overview_low_stock_stat">Low stock</string>
     <string name="overview_low_stock_section">Low stock</string>
     <string name="overview_recent_sales">Recent sales</string>
+    <string name="overview_recent_sales_supporting">The five most recent sales, newest first.</string>
+    <string name="overview_balance_amount">Balance %1$s</string>
+    <string name="overview_all_sales">All sales ›</string>
+    <string name="overview_low_stock_supporting">10 packs or fewer, based on current stock.</string>
+    <string name="overview_view_inventory">View inventory ›</string>
     <string name="overview_no_low_stock">Every product is above the low-stock threshold.</string>
     <string name="overview_no_sales">No sales recorded today.</string>
     <string name="overview_loading">Loading today’s overview…</string>
@@ -81,8 +93,8 @@
         <item quantity="one">%1$d sale</item>
         <item quantity="other">%1$d sales</item>
     </plurals>
-    <string name="overview_balance_detail">Outstanding</string>
-    <string name="overview_low_stock_detail">10 packs or fewer</string>
+    <string name="overview_balance_detail">Total unpaid customer balance</string>
+    <string name="overview_low_stock_detail">Products at 10 packs or fewer</string>
     <string name="overview_payments_detail">Includes repayments</string>
     <string name="overview_monthly_sales">Sales</string>
     <string name="overview_money_received">Money received</string>
@@ -211,16 +223,16 @@
 
     <!-- More -->
     <string name="more_title">More</string>
-    <string name="more_history">Stock history</string>
-    <string name="more_history_body">Receipts, sales and adjustments</string>
-    <string name="more_counts">Stock counts</string>
-    <string name="more_counts_body">Count physical stock and review differences</string>
+    <string name="more_movements">Stock movements</string>
+    <string name="more_movements_body">Receipts, sales and adjustments</string>
+    <string name="more_stocktakes">Stocktakes</string>
+    <string name="more_stocktakes_body">Count stock and approve differences</string>
     <string name="more_expenses">Expenses</string>
-    <string name="more_expenses_body">Record and review shop expenses</string>
+    <string name="more_expenses_body">Record and review shop spending</string>
     <string name="more_audit">Audit log</string>
-    <string name="more_audit_body">A record of sensitive changes</string>
+    <string name="more_audit_body">A record of important shop changes</string>
     <string name="more_settings">Settings</string>
-    <string name="more_settings_body">Theme, account and shop preferences</string>
+    <string name="more_settings_body">Profile, shop, appearance and team</string>
 
     <!-- Expenses -->
     <string name="expenses_title">Expenses</string>
@@ -292,4 +304,6 @@
     <string name="preview_sample_product">Baby diapers</string>
     <string name="preview_sample_brand">Everybuy baby</string>
     <string name="preview_sample_customer">Amina Bello</string>
+    <string name="preview_long_customer_name">Alexandria Chukwuebuka Ezeagwuna-Okafor</string>
+    <string name="preview_long_product_name">Ultra-absorbent newborn protection diapers with extra-soft leak guards</string>
 </resources>

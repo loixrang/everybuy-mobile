@@ -9,12 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Assessment
 import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -38,7 +37,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.WindowInsets
 import com.everybuy.mobile.R
 import com.everybuy.mobile.ui.components.EverybuyScreen
@@ -60,6 +58,7 @@ private val previewNavItems = listOf(
     PreviewNavItem(R.string.nav_sales, Icons.Rounded.ShoppingBag),
     PreviewNavItem(R.string.nav_customers, Icons.Rounded.People),
     PreviewNavItem(R.string.nav_overview, Icons.Rounded.Assessment),
+    PreviewNavItem(R.string.nav_more, Icons.Rounded.MoreHoriz),
 )
 
 @Preview(name = "Compact light", widthDp = 400, heightDp = 880, showBackground = true)
@@ -114,6 +113,18 @@ private fun ExpandedLightPreview() {
 @Composable
 private fun ExpandedDarkPreview() {
     PreviewApp(dark = true, rail = true, expandedRail = true)
+}
+
+@Preview(name = "Compact 1.3x", widthDp = 360, heightDp = 800, fontScale = 1.3f, showBackground = true)
+@Composable
+private fun CompactLargeFontPreview() {
+    PreviewApp(dark = false, rail = false, expandedRail = false)
+}
+
+@Preview(name = "Landscape compact", widthDp = 800, heightDp = 360, showBackground = true)
+@Composable
+private fun LandscapeCompactPreview() {
+    PreviewApp(dark = true, rail = true, expandedRail = false)
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -181,8 +192,8 @@ private fun PreviewApp(dark: Boolean, rail: Boolean, expandedRail: Boolean) {
                                             text = label,
                                             maxLines = 1,
                                             softWrap = false,
-                                            overflow = TextOverflow.Visible,
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                            overflow = TextOverflow.Clip,
+                                            style = MaterialTheme.typography.labelSmall,
                                         )
                                     },
                                 )
@@ -197,8 +208,7 @@ private fun PreviewApp(dark: Boolean, rail: Boolean, expandedRail: Boolean) {
 
 @Composable
 private fun PreviewBody(padding: PaddingValues) {
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 320.dp),
+    LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = 16.dp,
@@ -206,17 +216,16 @@ private fun PreviewBody(padding: PaddingValues) {
             top = padding.calculateTopPadding() + 4.dp,
             bottom = padding.calculateBottomPadding() + 104.dp,
         ),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item {
             ExpressiveSearchField(
                 value = "",
                 onValueChange = {},
                 placeholder = stringResource(R.string.inventory_search),
             )
         }
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = false,
@@ -225,28 +234,25 @@ private fun PreviewBody(padding: PaddingValues) {
                 )
             }
         }
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Row(
+        item {
+            StatTile(
+                label = stringResource(R.string.overview_sales_today),
+                value = "₦987,654,321.50",
+                supporting = pluralStringResource(R.plurals.overview_sales_count, 12, 12),
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                StatTile(
-                    label = stringResource(R.string.overview_sales_today),
-                    value = "₦148,500",
-                    supporting = pluralStringResource(R.plurals.overview_sales_count, 12, 12),
-                    modifier = Modifier.weight(1f),
-                )
-                StatTile(
-                    label = stringResource(R.string.overview_low_stock_stat),
-                    value = "4",
-                    supporting = stringResource(R.string.overview_low_stock_detail),
-                    modifier = Modifier.weight(1f),
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                )
-            }
+            )
         }
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item {
+            StatTile(
+                label = stringResource(R.string.overview_low_stock_stat),
+                value = "4",
+                supporting = stringResource(R.string.overview_low_stock_detail),
+                modifier = Modifier.fillMaxWidth(),
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+        }
+        item {
             SectionHeader(
                 title = pluralStringResource(R.plurals.inventory_products_count, 4, 4),
                 supporting = stringResource(R.string.inventory_subtitle),
@@ -254,35 +260,65 @@ private fun PreviewBody(padding: PaddingValues) {
         }
         items(4) { index ->
             TonalCard(modifier = Modifier.fillMaxWidth()) {
-                androidx.compose.foundation.layout.Column(
-                    Modifier.fillMaxWidth().padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.preview_sample_product) + " ${index + 1}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                text = stringResource(R.string.preview_sample_brand),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        TonalBadge(
-                            text = "18 ${stringResource(R.string.inventory_packs_in_stock)}",
+                    androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+                        Text(
+                            text = if (index == 0) stringResource(R.string.preview_long_product_name) else stringResource(R.string.preview_sample_product),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = stringResource(R.string.preview_sample_brand),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = "₦987,654,321.50",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            softWrap = false,
+                        )
+                    }
+                    TonalBadge(text = "18 packs")
+                }
+            }
+        }
+        item {
+            TonalCard(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.preview_long_customer_name),
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            "Customer · 18 Nov, 08:35",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
                         )
                     }
                     Text(
-                        text = "₦4,800",
+                        "₦987,654,321.50",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                 }
             }

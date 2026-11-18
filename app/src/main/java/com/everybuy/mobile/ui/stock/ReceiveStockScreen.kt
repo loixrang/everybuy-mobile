@@ -139,7 +139,7 @@ import java.math.BigDecimal
     ) {
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Stock received", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Stock received", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 Text(state.productName, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
                 Text("+${state.totalPacks} packs", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
                 Text("New balance: ${state.newStockPacks} packs", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 4.dp))

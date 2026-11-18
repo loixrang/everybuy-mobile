@@ -8,10 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -113,29 +110,27 @@ fun SalesScreen(
                 Modifier.padding(top = padding.calculateTopPadding()),
             )
             is SalesState.Ready -> {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 340.dp),
+                LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
                         top = padding.calculateTopPadding(),
-                        bottom = padding.calculateBottomPadding() + listBottomPadding(extra = 104.dp),
+                        bottom = padding.calculateBottomPadding() + listBottomPadding(extra = 96.dp),
                     ),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
+                    item {
                         SummaryCards(current.summary, current.summaryError)
                     }
-                    item(span = { GridItemSpan(maxLineSpan) }) {
+                    item {
                         ExpressiveSearchField(
                             value = query,
                             onValueChange = { query = it },
                             placeholder = stringResource(R.string.sales_search),
                         )
                     }
-                    item(span = { GridItemSpan(maxLineSpan) }) {
+                    item {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(statusFilters, key = { it.first }) { (labelRes, value) ->
                                 val label = stringResource(labelRes)
@@ -150,7 +145,7 @@ fun SalesScreen(
                             }
                         }
                     }
-                    item(span = { GridItemSpan(maxLineSpan) }) {
+                    item {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             androidx.compose.material3.OutlinedTextField(
                                 value = from,
@@ -175,11 +170,11 @@ fun SalesScreen(
                         }
                     }
                     dateError?.let { error ->
-                        item(span = { GridItemSpan(maxLineSpan) }) {
+                        item {
                             Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                         }
                     }
-                    item(span = { GridItemSpan(maxLineSpan) }) {
+                    item {
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
@@ -208,7 +203,7 @@ fun SalesScreen(
                             }) { Text(stringResource(R.string.action_apply_filters)) }
                         }
                     }
-                    item(span = { GridItemSpan(maxLineSpan) }) {
+                    item {
                         Text(
                             text = pluralStringResource(R.plurals.sales_count, current.total, current.total),
                             style = MaterialTheme.typography.labelLarge,
@@ -216,7 +211,7 @@ fun SalesScreen(
                         )
                     }
                     if (current.rows.isEmpty()) {
-                        item(span = { GridItemSpan(maxLineSpan) }) {
+                        item {
                             EmptyPane(
                                 title = stringResource(R.string.sales_no_results),
                                 body = stringResource(R.string.sales_no_results_body),
@@ -226,7 +221,7 @@ fun SalesScreen(
                         items(current.rows, key = { it.id }) { row ->
                             SaleRowCard(row) { onOpenSale(row.id) }
                         }
-                        item(span = { GridItemSpan(maxLineSpan) }) {
+                        item {
                             Row(
                                 Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -273,29 +268,25 @@ private fun SummaryCards(summary: SalesSummaryDto?, error: String?) {
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatTile(stringResource(R.string.sales_summary_sales), formatNaira(summary.salesTotal), "", Modifier.weight(1f))
-            StatTile(stringResource(R.string.sales_summary_received), formatNaira(summary.amountPaid), "", Modifier.weight(1f))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatTile(
-                label = stringResource(R.string.sales_summary_outstanding),
-                value = formatNaira(summary.outstanding),
-                supporting = "",
-                modifier = Modifier.weight(1f),
-                containerColor = if ((summary.outstanding.toBigDecimalOrNull() ?: java.math.BigDecimal.ZERO) > java.math.BigDecimal.ZERO) {
-                    MaterialTheme.colorScheme.errorContainer
-                } else {
-                    MaterialTheme.colorScheme.secondaryContainer
-                },
-                contentColor = if ((summary.outstanding.toBigDecimalOrNull() ?: java.math.BigDecimal.ZERO) > java.math.BigDecimal.ZERO) {
-                    MaterialTheme.colorScheme.onErrorContainer
-                } else {
-                    MaterialTheme.colorScheme.onSecondaryContainer
-                },
-            )
-            StatTile(stringResource(R.string.sales_summary_count), summary.salesCount.toString(), "", Modifier.weight(1f))
-        }
+        StatTile(stringResource(R.string.sales_summary_sales), formatNaira(summary.salesTotal), "", Modifier.fillMaxWidth())
+        StatTile(stringResource(R.string.sales_summary_received), formatNaira(summary.amountPaid), "", Modifier.fillMaxWidth())
+        StatTile(
+            label = stringResource(R.string.sales_summary_outstanding),
+            value = formatNaira(summary.outstanding),
+            supporting = "",
+            modifier = Modifier.fillMaxWidth(),
+            containerColor = if ((summary.outstanding.toBigDecimalOrNull() ?: java.math.BigDecimal.ZERO) > java.math.BigDecimal.ZERO) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                MaterialTheme.colorScheme.secondaryContainer
+            },
+            contentColor = if ((summary.outstanding.toBigDecimalOrNull() ?: java.math.BigDecimal.ZERO) > java.math.BigDecimal.ZERO) {
+                MaterialTheme.colorScheme.onErrorContainer
+            } else {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            },
+        )
+        StatTile(stringResource(R.string.sales_summary_count), summary.salesCount.toString(), "", Modifier.fillMaxWidth())
     }
 }
 
@@ -303,35 +294,44 @@ private fun SummaryCards(summary: SalesSummaryDto?, error: String?) {
 private fun SaleRowCard(row: SalesListRowDto, onOpen: () -> Unit) {
     TonalCard(Modifier.fillMaxWidth(), onClick = onOpen) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-                Column(Modifier.weight(1f)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         row.reference.ifBlank { "Sale" },
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        row.customer?.name ?: stringResource(R.string.sales_walk_in),
+                        "${row.customer?.name ?: stringResource(R.string.sales_walk_in)} · ${formatLagosDateTime(row.createdAt)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-                PaymentStatusBadge(row.status)
-            }
-            Text(
-                formatLagosDateTime(row.createdAt),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.sales_total, formatNaira(row.itemsTotal)), style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    stringResource(R.string.sales_balance, formatNaira(row.balance)),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                )
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        formatNaira(row.itemsTotal),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                    Text(
+                        stringResource(R.string.sales_balance, formatNaira(row.balance)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                    PaymentStatusBadge(row.status)
+                }
             }
         }
     }

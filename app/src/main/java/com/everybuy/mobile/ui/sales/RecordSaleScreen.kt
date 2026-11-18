@@ -98,7 +98,7 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
     ) {
         Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(Modifier.padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Sale recorded", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Sale recorded", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 Text(result.sale.saleNumber, style = MaterialTheme.typography.titleMedium)
                 Text("Total ${formatNaira(result.sale.itemsTotal)}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
                 Text("Amount paid ${formatNaira(paid)}", style = MaterialTheme.typography.bodyMedium)
@@ -187,7 +187,7 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
         OutlinedTextField(state.reference, viewModel::setReference, Modifier.fillMaxWidth(), label = { Text("Payment reference (optional)") }, singleLine = true, enabled = !nothingPaid)
         Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Sale total"); Text(formatNaira(total.toPlainString()), fontWeight = FontWeight.Bold) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Sale total"); Text(formatNaira(total.toPlainString()), fontWeight = FontWeight.SemiBold) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Amount paid"); Text(formatNaira(amountPaid.toPlainString())) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Balance owed"); Text(formatNaira(balance.toPlainString()), color = if (balance > BigDecimal.ZERO) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold) }
             }

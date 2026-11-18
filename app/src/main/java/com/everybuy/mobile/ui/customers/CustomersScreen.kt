@@ -1,6 +1,7 @@
 package com.everybuy.mobile.ui.customers
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -8,10 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -117,26 +115,24 @@ private fun CustomersContent(
         stringResource(R.string.customers_active) to STATUS_ACTIVE,
         stringResource(R.string.customers_inactive) to STATUS_INACTIVE,
     )
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 320.dp),
+    LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
             top = padding.calculateTopPadding() + 4.dp,
-            bottom = padding.calculateBottomPadding() + listBottomPadding(extra = 104.dp),
+            bottom = padding.calculateBottomPadding() + listBottomPadding(extra = 96.dp),
         ),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item {
             ExpressiveSearchField(
                 value = state.query,
                 onValueChange = viewModel::setQuery,
                 placeholder = stringResource(R.string.customers_search),
             )
         }
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(statusFilters, key = { it.second }) { (label, value) ->
                     FilterChip(
@@ -150,28 +146,8 @@ private fun CustomersContent(
                 }
             }
         }
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                StatTile(
-                    label = stringResource(R.string.customers_active),
-                    value = stringResource(R.string.customers_active_count, state.activeCount, state.customers.size),
-                    supporting = stringResource(R.string.customers_title),
-                    modifier = Modifier.weight(1f),
-                )
-                StatTile(
-                    label = stringResource(R.string.customers_owed),
-                    value = formatNaira(state.totalOutstanding.toPlainString()),
-                    supporting = stringResource(R.string.overview_balance_detail),
-                    modifier = Modifier.weight(1f),
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                )
-            }
-        }
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item { CustomerSummaryTiles(state) }
+        item {
             SectionHeader(
                 title = pluralStringResource(
                     R.plurals.customers_shown,
@@ -182,7 +158,7 @@ private fun CustomersContent(
             )
         }
         if (filtered.isEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
+            item {
                 EmptyPane(
                     title = if (state.customers.isEmpty()) {
                         stringResource(R.string.customers_empty)
@@ -227,7 +203,7 @@ private fun CustomerRowCard(
                         text = customer.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
@@ -244,20 +220,54 @@ private fun CustomerRowCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = if (balance > BigDecimal.ZERO) {
-                        stringResource(R.string.customers_owes, formatNaira(customer.balance))
-                    } else {
-                        stringResource(R.string.customers_no_balance)
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (balance > BigDecimal.ZERO) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = if (balance > BigDecimal.ZERO) FontWeight.SemiBold else FontWeight.Normal,
+                    stringResource(R.string.customers_statement),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = stringResource(R.string.customers_statement),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    text = if (balance > BigDecimal.ZERO) formatNaira(customer.balance) else stringResource(R.string.customers_no_balance),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (balance > BigDecimal.ZERO) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = if (balance > BigDecimal.ZERO) FontWeight.SemiBold else FontWeight.Medium,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CustomerSummaryTiles(state: CustomersState.Ready) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val activeTile: @Composable (Modifier) -> Unit = { tileModifier ->
+            StatTile(
+                label = stringResource(R.string.customers_active),
+                value = stringResource(R.string.customers_active_count, state.activeCount, state.customers.size),
+                supporting = stringResource(R.string.customers_title),
+                modifier = tileModifier,
+            )
+        }
+        val balanceTile: @Composable (Modifier) -> Unit = { tileModifier ->
+            StatTile(
+                label = stringResource(R.string.customers_owed),
+                value = formatNaira(state.totalOutstanding.toPlainString()),
+                supporting = stringResource(R.string.overview_balance_detail),
+                modifier = tileModifier,
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+        }
+        if (maxWidth >= 612.dp) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                activeTile(Modifier.weight(1f))
+                balanceTile(Modifier.weight(1f))
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                activeTile(Modifier.fillMaxWidth())
+                balanceTile(Modifier.fillMaxWidth())
             }
         }
     }

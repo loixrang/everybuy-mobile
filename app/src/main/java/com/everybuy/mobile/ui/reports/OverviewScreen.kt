@@ -3,6 +3,7 @@ package com.everybuy.mobile.ui.reports
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,14 +11,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.NavigateBefore
 import androidx.compose.material.icons.automirrored.rounded.NavigateNext
@@ -25,7 +25,6 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -53,6 +52,7 @@ import com.everybuy.mobile.R
 import com.everybuy.mobile.core.util.formatLagosDateTime
 import com.everybuy.mobile.core.util.formatNaira
 import com.everybuy.mobile.data.AuthUser
+import com.everybuy.mobile.data.DailyOverview
 import com.everybuy.mobile.data.MonthlyClosingStock
 import com.everybuy.mobile.data.MonthlyProductSold
 import com.everybuy.mobile.data.MonthlyReportDto
@@ -66,6 +66,8 @@ import com.everybuy.mobile.ui.components.SectionHeader
 import com.everybuy.mobile.ui.components.StatTile
 import com.everybuy.mobile.ui.components.TonalCard
 import com.everybuy.mobile.ui.components.listBottomPadding
+import com.everybuy.mobile.ui.components.LocalAppHazeState
+import com.everybuy.mobile.ui.components.glass
 import java.math.BigDecimal
 
 private enum class OverviewTab(val labelRes: Int) {
@@ -109,25 +111,24 @@ fun OverviewScreen(
     }
     EverybuyScreen(
         title = stringResource(R.string.overview_title),
-        subtitle = user.name.ifBlank { user.email },
+        subtitle = stringResource(R.string.overview_subtitle),
         onOpenSettings = onOpenSettings,
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onRecordSale,
-                icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
-                text = { Text(stringResource(R.string.overview_record_sale)) },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-        },
     ) { padding ->
         Column(Modifier.fillMaxSize()) {
+            Button(
+                onClick = onRecordSale,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            ) {
+                Icon(Icons.Rounded.Add, contentDescription = null)
+                Text(stringResource(R.string.overview_record_sale), modifier = Modifier.padding(start = 8.dp))
+            }
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding()),
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .glass(LocalAppHazeState.current),
                 shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.96f),
             ) {
                 PrimaryTabRow(
                     selectedTabIndex = tab.ordinal,
@@ -150,7 +151,7 @@ fun OverviewScreen(
                     }
                 }
             }
-            val bottom = padding.calculateBottomPadding() + listBottomPadding(extra = 104.dp)
+            val bottom = padding.calculateBottomPadding() + listBottomPadding(extra = 24.dp)
             when (tab) {
                 OverviewTab.TODAY -> TodayPanel(
                     state = dailyState,
@@ -202,8 +203,7 @@ private fun TodayPanel(
         is OverviewState.Failed -> ErrorPane(state.message, if (state.forbidden) null else onRetry, modifier)
         is OverviewState.Ready -> {
             val report = state.report
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 168.dp),
+            LazyColumn(
                 modifier = modifier,
                 contentPadding = PaddingValues(
                     start = 16.dp,
@@ -211,107 +211,239 @@ private fun TodayPanel(
                     top = 12.dp,
                     bottom = bottomPadding,
                 ),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    SectionHeader(title = stringResource(R.string.overview_at_a_glance))
+                item(key = "overview-stat-tiles") {
+                    ReportStatTiles(report, onOpenSales, onOpenCustomers, onOpenStock)
                 }
-                item {
-                    StatTile(
-                        label = stringResource(R.string.overview_sales_today),
-                        value = formatNaira(report.salesToday.total),
-                        supporting = pluralStringResource(
-                            R.plurals.overview_sales_count,
-                            report.salesToday.count,
-                            report.salesToday.count,
-                        ),
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        onClick = onOpenSales,
-                        modifier = Modifier.fillMaxWidth(),
+                item(key = "recent-sales") {
+                    RecentSalesCard(
+                        sales = report.recentSales.take(5),
+                        onOpenSale = onOpenSale,
+                        onRefresh = onRetry,
+                        onOpenSales = onOpenSales,
                     )
                 }
-                item {
-                    StatTile(
-                        label = stringResource(R.string.overview_payments_received),
-                        value = formatNaira(report.paymentsReceived),
-                        supporting = stringResource(R.string.overview_payments_detail),
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                        onClick = onOpenSales,
-                        modifier = Modifier.fillMaxWidth(),
+                item(key = "low-stock-heading") {
+                    SectionHeader(
+                        title = stringResource(R.string.overview_low_stock_section),
+                        supporting = stringResource(R.string.overview_low_stock_supporting),
                     )
-                }
-                item {
-                    val outstanding = positive(report.customerBalances)
-                    StatTile(
-                        label = stringResource(R.string.overview_customer_balances),
-                        value = formatNaira(report.customerBalances),
-                        supporting = stringResource(R.string.overview_balance_detail),
-                        containerColor = if (outstanding) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                        contentColor = if (outstanding) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface,
-                        onClick = onOpenCustomers,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                item {
-                    val low = report.lowStock.isNotEmpty()
-                    StatTile(
-                        label = stringResource(R.string.overview_low_stock_stat),
-                        value = report.lowStock.size.toString(),
-                        supporting = stringResource(R.string.overview_low_stock_detail),
-                        containerColor = if (low) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer,
-                        contentColor = if (low) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer,
-                        onClick = onOpenStock,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    SectionHeader(title = stringResource(R.string.overview_low_stock_section))
                 }
                 if (report.lowStock.isEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
+                    item(key = "low-stock-empty") {
                         EmptyPane(title = stringResource(R.string.overview_no_low_stock), body = "")
                     }
                 } else {
-                    items(report.lowStock, key = { "low-${it.productId}" }) { item ->
-                        TonalCard(onClick = { onOpenProduct(item.productId) }, modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                Modifier.fillMaxWidth().padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = item.name,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    text = "${item.packsAvailable} packs",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.error,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                            }
+                    items(report.lowStock, key = { "low-${it.productId}" }) { product ->
+                        LowStockRow(
+                            name = product.name,
+                            packs = product.packsAvailable,
+                            onClick = { onOpenProduct(product.productId) },
+                        )
+                    }
+                }
+                item(key = "view-inventory") {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        androidx.compose.material3.TextButton(onClick = onOpenStock) {
+                            Text(stringResource(R.string.overview_view_inventory))
                         }
                     }
                 }
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    SectionHeader(title = stringResource(R.string.overview_recent_sales))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReportStatTiles(
+    report: DailyOverview,
+    onOpenSales: () -> Unit,
+    onOpenCustomers: () -> Unit,
+    onOpenStock: () -> Unit,
+) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        if (maxWidth >= 612.dp) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ReportStatTile(report, 0, onOpenSales, onOpenCustomers, onOpenStock, Modifier.weight(1f))
+                    ReportStatTile(report, 1, onOpenSales, onOpenCustomers, onOpenStock, Modifier.weight(1f))
                 }
-                if (report.recentSales.isEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        EmptyPane(title = stringResource(R.string.overview_no_sales), body = "")
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ReportStatTile(report, 2, onOpenSales, onOpenCustomers, onOpenStock, Modifier.weight(1f))
+                    ReportStatTile(report, 3, onOpenSales, onOpenCustomers, onOpenStock, Modifier.weight(1f))
+                }
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                repeat(4) { index ->
+                    ReportStatTile(report, index, onOpenSales, onOpenCustomers, onOpenStock, Modifier.fillMaxWidth())
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReportStatTile(
+    report: DailyOverview,
+    index: Int,
+    onOpenSales: () -> Unit,
+    onOpenCustomers: () -> Unit,
+    onOpenStock: () -> Unit,
+    modifier: Modifier,
+) {
+    when (index) {
+        0 -> StatTile(
+            label = stringResource(R.string.overview_sales_today),
+            value = formatNaira(report.salesToday.total),
+            supporting = pluralStringResource(R.plurals.overview_sales_count, report.salesToday.count, report.salesToday.count),
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            onClick = onOpenSales,
+            modifier = modifier,
+        )
+        1 -> StatTile(
+            label = stringResource(R.string.overview_payments_received),
+            value = formatNaira(report.paymentsReceived),
+            supporting = stringResource(R.string.overview_payments_detail),
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            onClick = onOpenSales,
+            modifier = modifier,
+        )
+        2 -> {
+            val outstanding = positive(report.customerBalances)
+            StatTile(
+                label = stringResource(R.string.overview_customer_balances),
+                value = formatNaira(report.customerBalances),
+                supporting = stringResource(R.string.overview_balance_detail),
+                containerColor = if (outstanding) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = if (outstanding) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface,
+                onClick = onOpenCustomers,
+                modifier = modifier,
+            )
+        }
+        else -> {
+            val low = report.lowStock.isNotEmpty()
+            StatTile(
+                label = stringResource(R.string.overview_low_stock_stat),
+                value = report.lowStock.size.toString(),
+                supporting = stringResource(R.string.overview_low_stock_detail),
+                containerColor = if (low) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = if (low) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer,
+                onClick = onOpenStock,
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RecentSalesCard(
+    sales: List<OverviewRecentSale>,
+    onOpenSale: (String) -> Unit,
+    onRefresh: () -> Unit,
+    onOpenSales: () -> Unit,
+) {
+    TonalCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+            SectionHeader(
+                title = stringResource(R.string.overview_recent_sales),
+                supporting = stringResource(R.string.overview_recent_sales_supporting),
+                action = {
+                    androidx.compose.material3.FilledTonalIconButton(onClick = onRefresh) {
+                        Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.action_refresh))
                     }
-                } else {
-                    items(report.recentSales, key = { "sale-${it.id}" }) { sale ->
-                        RecentSaleCard(sale) { onOpenSale(sale.id) }
+                },
+            )
+            if (sales.isEmpty()) {
+                EmptyPane(title = stringResource(R.string.overview_no_sales), body = "")
+            } else {
+                sales.forEachIndexed { index, sale ->
+                    if (index > 0) androidx.compose.material3.HorizontalDivider()
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenSale(sale.id) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                sale.reference,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                "${sale.customer?.name ?: stringResource(R.string.sales_walk_in)} · ${formatLagosDateTime(sale.soldAt)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                formatNaira(sale.itemsTotal),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                softWrap = false,
+                            )
+                            Text(
+                                stringResource(R.string.overview_balance_amount, formatNaira(sale.balance)),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                softWrap = false,
+                            )
+                        }
                     }
                 }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                androidx.compose.material3.TextButton(onClick = onOpenSales) {
+                    Text(stringResource(R.string.overview_all_sales))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LowStockRow(name: String, packs: Int, onClick: () -> Unit) {
+    val isEmpty = packs == 0
+    TonalCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = if (isEmpty) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = if (isEmpty) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer,
+            ) {
+                Text(
+                    pluralStringResource(R.plurals.overview_pack_count, packs, packs),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                )
             }
         }
     }
@@ -413,38 +545,19 @@ private fun MonthHeader(month: String, onMonthChange: (String) -> Unit) {
 
 @Composable
 private fun MonthlySummary(report: MonthlyReportDto) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatTile(
-                label = stringResource(R.string.overview_monthly_sales),
-                value = formatNaira(report.salesTotal),
-                supporting = "",
-                modifier = Modifier.weight(1f),
-            )
-            StatTile(
-                label = stringResource(R.string.overview_money_received),
-                value = formatNaira(report.moneyReceived),
-                supporting = "",
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            val outstanding = positive(report.outstandingDebtAtMonthEnd)
-            StatTile(
-                label = stringResource(R.string.overview_outstanding_debt),
-                value = formatNaira(report.outstandingDebtAtMonthEnd),
-                supporting = "",
-                containerColor = if (outstanding) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = if (outstanding) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.weight(1f),
-            )
-            StatTile(
-                label = stringResource(R.string.overview_products_sold),
-                value = report.productsSold.size.toString(),
-                supporting = "",
-                modifier = Modifier.weight(1f),
-            )
-        }
+    val outstanding = positive(report.outstandingDebtAtMonthEnd)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        StatTile(stringResource(R.string.overview_monthly_sales), formatNaira(report.salesTotal), "", Modifier.fillMaxWidth())
+        StatTile(stringResource(R.string.overview_money_received), formatNaira(report.moneyReceived), "", Modifier.fillMaxWidth())
+        StatTile(
+            label = stringResource(R.string.overview_outstanding_debt),
+            value = formatNaira(report.outstandingDebtAtMonthEnd),
+            supporting = "",
+            containerColor = if (outstanding) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = if (outstanding) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        StatTile(stringResource(R.string.overview_products_sold), report.productsSold.size.toString(), "", Modifier.fillMaxWidth())
     }
 }
 
@@ -498,41 +611,27 @@ private fun ClosingStockCard(product: MonthlyClosingStock) {
 
 @Composable
 private fun ProfitSummary(report: ProfitReportDto) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatTile(
-                label = stringResource(R.string.overview_revenue),
-                value = formatNaira(report.revenue.orEmpty()),
-                supporting = "",
-                modifier = Modifier.weight(1f),
-            )
-            StatTile(
-                label = stringResource(R.string.overview_cogs),
-                value = formatNaira(report.cogs.orEmpty()),
-                supporting = "",
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            val grossNegative = negative(report.grossProfit)
-            StatTile(
-                label = stringResource(R.string.overview_gross_profit),
-                value = formatNaira(report.grossProfit.orEmpty()),
-                supporting = "",
-                containerColor = if (grossNegative) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = if (grossNegative) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer,
-                modifier = Modifier.weight(1f),
-            )
-            val netNegative = negative(report.netProfit)
-            StatTile(
-                label = stringResource(R.string.overview_net_profit),
-                value = formatNaira(report.netProfit.orEmpty()),
-                supporting = "",
-                containerColor = if (netNegative) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
-                contentColor = if (netNegative) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.weight(1f),
-            )
-        }
+    val grossNegative = negative(report.grossProfit)
+    val netNegative = negative(report.netProfit)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        StatTile(stringResource(R.string.overview_revenue), formatNaira(report.revenue.orEmpty()), "", Modifier.fillMaxWidth())
+        StatTile(stringResource(R.string.overview_cogs), formatNaira(report.cogs.orEmpty()), "", Modifier.fillMaxWidth())
+        StatTile(
+            label = stringResource(R.string.overview_gross_profit),
+            value = formatNaira(report.grossProfit.orEmpty()),
+            supporting = "",
+            containerColor = if (grossNegative) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = if (grossNegative) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        StatTile(
+            label = stringResource(R.string.overview_net_profit),
+            value = formatNaira(report.netProfit.orEmpty()),
+            supporting = "",
+            containerColor = if (netNegative) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+            contentColor = if (netNegative) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -565,7 +664,7 @@ private fun ProfitRow(label: String, value: String, negative: Boolean = false, s
         Text(
             (if (negative) "− " else "") + formatNaira(amount.abs().toPlainString()),
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (strong) FontWeight.Bold else FontWeight.SemiBold,
+            fontWeight = FontWeight.SemiBold,
             color = if (amount < BigDecimal.ZERO) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
         )
     }
@@ -582,7 +681,7 @@ private fun MissingCostWarning(report: ProfitReportDto, onOpenSale: (String) -> 
             Text(
                 "Profit cannot be calculated",
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
             Text(
                 "${report.missingCostCount} sale item cost snapshot${if (report.missingCostCount == 1) " is" else "s are"} missing. Profit figures stay hidden until an owner confirms the historical acquisition costs.",
@@ -603,44 +702,6 @@ private fun MissingCostWarning(report: ProfitReportDto, onOpenSale: (String) -> 
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 12.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RecentSaleCard(sale: OverviewRecentSale, onOpen: () -> Unit) {
-    TonalCard(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onOpen,
-    ) {
-        Row(
-            Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(sale.reference, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(sale.customer?.name ?: stringResource(R.string.sales_walk_in), style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    formatLagosDateTime(sale.soldAt),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    formatNaira(sale.itemsTotal),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                if (positive(sale.balance)) {
-                    Text(
-                        "Due ${formatNaira(sale.balance)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             }

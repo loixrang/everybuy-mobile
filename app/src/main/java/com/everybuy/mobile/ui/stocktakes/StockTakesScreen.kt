@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -141,20 +139,18 @@ private fun StockTakeList(
     modifier: Modifier = Modifier,
 ) {
     val totalPages = maxOf(1, (state.total + STOCK_TAKE_PAGE_SIZE - 1) / STOCK_TAKE_PAGE_SIZE)
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 320.dp),
+    LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
             top = padding.calculateTopPadding() + 4.dp,
-            bottom = padding.calculateBottomPadding() + listBottomPadding(extra = 104.dp),
+            bottom = padding.calculateBottomPadding() + listBottomPadding(extra = 96.dp),
         ),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (state.stockTakes.isEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
+            item {
                 EmptyPane(
                     title = stringResource(R.string.counts_empty),
                     body = stringResource(R.string.counts_empty_body),
@@ -171,7 +167,7 @@ private fun StockTakeList(
                     modifier = Modifier.animateItem(),
                 )
             }
-            item(span = { GridItemSpan(maxLineSpan) }) {
+            item {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,

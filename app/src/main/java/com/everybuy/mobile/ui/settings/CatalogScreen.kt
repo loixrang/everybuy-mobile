@@ -87,7 +87,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
             }
             CatalogState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
             is CatalogState.Forbidden -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Text(current.message, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(current.message, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
             is CatalogState.Failed -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 Text(current.message, color = MaterialTheme.colorScheme.error)
@@ -113,7 +113,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
                     if (current.actionError != null) FeedbackCard(current.actionError, true) { viewModel.clearFeedback() }
                     if (records.isEmpty()) {
                         Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                            Text("No ${kind.label}s yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("No ${kind.label}s yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Text("Add the first ${kind.label} using the button below.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
                         }
                     } else {

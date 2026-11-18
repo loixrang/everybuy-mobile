@@ -69,13 +69,13 @@ import com.everybuy.mobile.data.StockMovementDto
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp),
     ) {
-        Text(product.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(product.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text(listOfNotNull(brand, category, product.packName, product.size?.takeIf { it.isNotBlank() }).joinToString(" · "), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
         Spacer(Modifier.height(18.dp))
         Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(Modifier.padding(20.dp)) {
                 Text("Available stock", style = MaterialTheme.typography.titleMedium)
-                Text("${product.stockPacks} packs", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                Text("${product.stockPacks} packs", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
                 val bags = if (product.packsPerBag > 0) product.stockPacks / product.packsPerBag else 0
                 val loose = if (product.packsPerBag > 0) product.stockPacks % product.packsPerBag else product.stockPacks
                 Text("$bags ${if (bags == 1) "bag" else "bags"} + $loose ${if (loose == 1) "pack" else "packs"}", style = MaterialTheme.typography.bodyMedium)
@@ -148,7 +148,7 @@ import com.everybuy.mobile.data.StockMovementDto
             Text(
                 "${if (positive) "+" else ""}${movement.changePacks} packs",
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = if (positive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             )
         }

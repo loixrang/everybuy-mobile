@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Assessment
 import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -28,14 +29,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -51,6 +55,8 @@ import com.everybuy.mobile.ui.audit.AuditScreen
 import com.everybuy.mobile.ui.auth.AppTheme
 import com.everybuy.mobile.ui.components.LocalAppHazeState
 import com.everybuy.mobile.ui.components.LocalBottomChromeHeight
+import com.everybuy.mobile.ui.components.LocalCycleTheme
+import com.everybuy.mobile.ui.components.LocalOpenSettings
 import com.everybuy.mobile.ui.components.LocalNavigationRailVisible
 import com.everybuy.mobile.ui.components.glass
 import com.everybuy.mobile.ui.components.hazeBlurEnabled
@@ -61,7 +67,7 @@ import com.everybuy.mobile.ui.expenses.ExpensesScreen
 import com.everybuy.mobile.ui.inventory.InventoryScreen
 import com.everybuy.mobile.ui.inventory.ProductDetailScreen
 import com.everybuy.mobile.ui.inventory.ProductFormScreen
-import com.everybuy.mobile.ui.more.MoreScreen
+import com.everybuy.mobile.ui.more.MoreBottomSheet
 import com.everybuy.mobile.ui.reports.OverviewScreen
 import com.everybuy.mobile.ui.sales.RecordSaleScreen
 import com.everybuy.mobile.ui.sales.SaleDetailScreen
@@ -77,16 +83,21 @@ import com.everybuy.mobile.ui.stocktakes.StockTakeDetailScreen
 import com.everybuy.mobile.ui.stocktakes.StockTakesScreen
 import dev.chrisbanes.haze.rememberHazeState
 
-private data class MainDestination(val route: String, val labelRes: Int, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+private data class MainDestination(
+    val route: String?,
+    val labelRes: Int,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+)
 
 private val destinations = listOf(
     MainDestination("inventory", R.string.nav_stock, Icons.Rounded.Inventory2),
     MainDestination("sales", R.string.nav_sales, Icons.Rounded.ShoppingBag),
     MainDestination("customers", R.string.nav_customers, Icons.Rounded.People),
     MainDestination("overview", R.string.nav_overview, Icons.Rounded.Assessment),
+    MainDestination(null, R.string.nav_more, Icons.Rounded.MoreHoriz),
 )
 
-private val mainRoutes = destinations.map { it.route }.toSet()
+private val mainRoutes = destinations.mapNotNull { it.route }.toSet()
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -101,11 +112,24 @@ fun AuthenticatedApp(
     val backStack by navController.currentBackStackEntryAsState()
     val destination = backStack?.destination
     val showChrome = destination?.route in mainRoutes
-    val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     val widthAtLeastMedium = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
     val widthAtLeastExpanded = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
     val useRail = showChrome && widthAtLeastMedium
     val hazeState = rememberHazeState(blurEnabled = hazeBlurEnabled())
+    var moreSheetOpen by rememberSaveable { mutableStateOf(false) }
+    val cycleTheme = remember(theme, setTheme) {
+        {
+            setTheme(
+                when (theme) {
+                    AppTheme.SYSTEM -> AppTheme.LIGHT
+                    AppTheme.LIGHT -> AppTheme.DARK
+                    AppTheme.DARK -> AppTheme.AMOLED
+                    AppTheme.AMOLED -> AppTheme.SYSTEM
+                },
+            )
+        }
+    }
 
     fun navigateTo(route: String) {
         navController.navigate(route) {
@@ -119,6 +143,10 @@ fun AuthenticatedApp(
         LocalAppHazeState provides hazeState,
         LocalBottomChromeHeight provides if (showChrome && !useRail) 80.dp else 0.dp,
         LocalNavigationRailVisible provides useRail,
+        LocalCycleTheme provides cycleTheme,
+        LocalOpenSettings provides {
+            if (destination?.route != "settings") navController.navigate("settings")
+        },
     ) {
         if (useRail) {
             val railState = rememberWideNavigationRailState(
@@ -142,7 +170,9 @@ fun AuthenticatedApp(
                     NavigationRailItems(
                         selectedHierarchy = destination,
                         railExpanded = widthAtLeastExpanded,
+                        moreSelected = moreSheetOpen,
                         onNavigate = ::navigateTo,
+                        onOpenMore = { moreSheetOpen = true },
                     )
                 }
                 NavGraph(
@@ -186,10 +216,13 @@ fun AuthenticatedApp(
                         ) {
                             destinations.forEach { item ->
                                 val selected = destination?.hierarchy?.any { it.route == item.route } == true
+                                val isMore = item.route == null
                                 val label = stringResource(item.labelRes)
                                 NavigationBarItem(
-                                    selected = selected,
-                                    onClick = { navigateTo(item.route) },
+                                    selected = selected || (isMore && moreSheetOpen),
+                                    onClick = {
+                                        if (item.route == null) moreSheetOpen = true else navigateTo(item.route)
+                                    },
                                     icon = { Icon(item.icon, contentDescription = label) },
                                     alwaysShowLabel = true,
                                     label = {
@@ -208,6 +241,16 @@ fun AuthenticatedApp(
                 }
             }
         }
+        if (moreSheetOpen) {
+            MoreBottomSheet(
+                userName = user.name.ifBlank { user.email },
+                email = user.email,
+                hazeState = hazeState,
+                onDismiss = { moreSheetOpen = false },
+                onNavigate = ::navigateTo,
+                onSignOut = onSignOut,
+            )
+        }
     }
 }
 
@@ -215,14 +258,18 @@ fun AuthenticatedApp(
 private fun NavigationRailItems(
     selectedHierarchy: androidx.navigation.NavDestination?,
     railExpanded: Boolean,
+    moreSelected: Boolean,
     onNavigate: (String) -> Unit,
+    onOpenMore: () -> Unit,
 ) {
     destinations.forEach { item ->
-        val selected = selectedHierarchy?.hierarchy?.any { it.route == item.route } == true
+        val selected = item.route?.let { route ->
+            selectedHierarchy?.hierarchy?.any { it.route == route } == true
+        } ?: false
         val label = stringResource(item.labelRes)
         WideNavigationRailItem(
-            selected = selected,
-            onClick = { onNavigate(item.route) },
+            selected = selected || (item.route == null && moreSelected),
+            onClick = { item.route?.let(onNavigate) ?: onOpenMore() },
             icon = { Icon(item.icon, contentDescription = label) },
             label = {
                 Text(
@@ -288,16 +335,6 @@ private fun NavGraph(
                 },
                 onRecordSale = { navController.navigate("sales/new") },
                 onSessionExpired = onSignOut,
-            )
-        }
-        composable("more") {
-            MoreScreen(
-                userName = user.name.ifBlank { user.email },
-                onOpenHistory = { navController.navigate("movements") },
-                onOpenCounts = { navController.navigate("stocktakes") },
-                onOpenExpenses = { navController.navigate("expenses") },
-                onOpenAudit = { navController.navigate("audit") },
-                onOpenSettings = onOpenSettings,
             )
         }
         composable("expenses") { ExpensesScreen(onBack = { navController.popBackStack() }, onSessionExpired = onSignOut) }

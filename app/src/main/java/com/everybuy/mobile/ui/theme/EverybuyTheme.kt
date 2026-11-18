@@ -2,7 +2,6 @@ package com.everybuy.mobile.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -22,14 +21,16 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.everybuy.mobile.R
 import com.everybuy.mobile.ui.auth.AppTheme
 
 private val Poppins = FontFamily(
     Font(R.font.poppins_regular, FontWeight.Normal),
+    Font(R.font.poppins_regular, FontWeight.Medium),
     Font(R.font.poppins_semibold, FontWeight.SemiBold),
-    Font(R.font.poppins_bold, FontWeight.Bold),
 )
 
 /**
@@ -47,42 +48,47 @@ val EverybuyShapes = Shapes(
     extraExtraLarge = RoundedCornerShape(48.dp),
 )
 
-private fun TextStyle.poppins(): TextStyle = copy(fontFamily = Poppins)
-
 private val BaseTypography = Typography()
 
-/** Expressive type scale: Poppins for every role plus the emphasized variants. */
+private fun TextStyle.scale(size: TextUnit, weight: FontWeight): TextStyle = copy(
+    fontFamily = Poppins,
+    fontSize = size,
+    fontWeight = weight,
+    lineHeight = size * 1.25f,
+)
+
+/** One compact scale used throughout the app; system font scaling remains untouched. */
 val EverybuyTypography: Typography = BaseTypography.copy(
-    displayLarge = BaseTypography.displayLarge.poppins(),
-    displayMedium = BaseTypography.displayMedium.poppins(),
-    displaySmall = BaseTypography.displaySmall.poppins(),
-    headlineLarge = BaseTypography.headlineLarge.poppins(),
-    headlineMedium = BaseTypography.headlineMedium.poppins(),
-    headlineSmall = BaseTypography.headlineSmall.poppins(),
-    titleLarge = BaseTypography.titleLarge.poppins(),
-    titleMedium = BaseTypography.titleMedium.poppins(),
-    titleSmall = BaseTypography.titleSmall.poppins(),
-    bodyLarge = BaseTypography.bodyLarge.poppins(),
-    bodyMedium = BaseTypography.bodyMedium.poppins(),
-    bodySmall = BaseTypography.bodySmall.poppins(),
-    labelLarge = BaseTypography.labelLarge.poppins(),
-    labelMedium = BaseTypography.labelMedium.poppins(),
-    labelSmall = BaseTypography.labelSmall.poppins(),
-    displayLargeEmphasized = BaseTypography.displayLargeEmphasized.poppins(),
-    displayMediumEmphasized = BaseTypography.displayMediumEmphasized.poppins(),
-    displaySmallEmphasized = BaseTypography.displaySmallEmphasized.poppins(),
-    headlineLargeEmphasized = BaseTypography.headlineLargeEmphasized.poppins(),
-    headlineMediumEmphasized = BaseTypography.headlineMediumEmphasized.poppins(),
-    headlineSmallEmphasized = BaseTypography.headlineSmallEmphasized.poppins(),
-    titleLargeEmphasized = BaseTypography.titleLargeEmphasized.poppins(),
-    titleMediumEmphasized = BaseTypography.titleMediumEmphasized.poppins(),
-    titleSmallEmphasized = BaseTypography.titleSmallEmphasized.poppins(),
-    bodyLargeEmphasized = BaseTypography.bodyLargeEmphasized.poppins(),
-    bodyMediumEmphasized = BaseTypography.bodyMediumEmphasized.poppins(),
-    bodySmallEmphasized = BaseTypography.bodySmallEmphasized.poppins(),
-    labelLargeEmphasized = BaseTypography.labelLargeEmphasized.poppins(),
-    labelMediumEmphasized = BaseTypography.labelMediumEmphasized.poppins(),
-    labelSmallEmphasized = BaseTypography.labelSmallEmphasized.poppins(),
+    displayLarge = BaseTypography.displayLarge.scale(28.sp, FontWeight.SemiBold),
+    displayMedium = BaseTypography.displayMedium.scale(28.sp, FontWeight.SemiBold),
+    displaySmall = BaseTypography.displaySmall.scale(28.sp, FontWeight.SemiBold),
+    headlineLarge = BaseTypography.headlineLarge.scale(28.sp, FontWeight.SemiBold),
+    headlineMedium = BaseTypography.headlineMedium.scale(28.sp, FontWeight.SemiBold),
+    headlineSmall = BaseTypography.headlineSmall.scale(18.sp, FontWeight.SemiBold),
+    titleLarge = BaseTypography.titleLarge.scale(18.sp, FontWeight.SemiBold),
+    titleMedium = BaseTypography.titleMedium.scale(16.sp, FontWeight.Medium),
+    titleSmall = BaseTypography.titleSmall.scale(14.sp, FontWeight.Medium),
+    bodyLarge = BaseTypography.bodyLarge.scale(14.sp, FontWeight.Normal),
+    bodyMedium = BaseTypography.bodyMedium.scale(14.sp, FontWeight.Normal),
+    bodySmall = BaseTypography.bodySmall.scale(13.sp, FontWeight.Normal),
+    labelLarge = BaseTypography.labelLarge.scale(12.sp, FontWeight.Medium),
+    labelMedium = BaseTypography.labelMedium.scale(12.sp, FontWeight.Medium),
+    labelSmall = BaseTypography.labelSmall.scale(12.sp, FontWeight.Medium),
+    displayLargeEmphasized = BaseTypography.displayLargeEmphasized.scale(28.sp, FontWeight.SemiBold),
+    displayMediumEmphasized = BaseTypography.displayMediumEmphasized.scale(28.sp, FontWeight.SemiBold),
+    displaySmallEmphasized = BaseTypography.displaySmallEmphasized.scale(28.sp, FontWeight.SemiBold),
+    headlineLargeEmphasized = BaseTypography.headlineLargeEmphasized.scale(28.sp, FontWeight.SemiBold),
+    headlineMediumEmphasized = BaseTypography.headlineMediumEmphasized.scale(28.sp, FontWeight.SemiBold),
+    headlineSmallEmphasized = BaseTypography.headlineSmallEmphasized.scale(18.sp, FontWeight.SemiBold),
+    titleLargeEmphasized = BaseTypography.titleLargeEmphasized.scale(18.sp, FontWeight.SemiBold),
+    titleMediumEmphasized = BaseTypography.titleMediumEmphasized.scale(16.sp, FontWeight.SemiBold),
+    titleSmallEmphasized = BaseTypography.titleSmallEmphasized.scale(14.sp, FontWeight.SemiBold),
+    bodyLargeEmphasized = BaseTypography.bodyLargeEmphasized.scale(14.sp, FontWeight.SemiBold),
+    bodyMediumEmphasized = BaseTypography.bodyMediumEmphasized.scale(14.sp, FontWeight.SemiBold),
+    bodySmallEmphasized = BaseTypography.bodySmallEmphasized.scale(13.sp, FontWeight.SemiBold),
+    labelLargeEmphasized = BaseTypography.labelLargeEmphasized.scale(12.sp, FontWeight.SemiBold),
+    labelMediumEmphasized = BaseTypography.labelMediumEmphasized.scale(12.sp, FontWeight.SemiBold),
+    labelSmallEmphasized = BaseTypography.labelSmallEmphasized.scale(12.sp, FontWeight.SemiBold),
 )
 
 /** Green seed-derived fallback used below API 31 and for the AMOLED variant. */

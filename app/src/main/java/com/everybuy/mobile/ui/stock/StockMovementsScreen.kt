@@ -337,7 +337,7 @@ private fun StockAdjustmentSheet(
             Text(
                 text = stringResource(R.string.history_adjust_stock),
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = pluralStringResource(

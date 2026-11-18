@@ -87,7 +87,7 @@ import com.everybuy.mobile.data.SaleItemDto
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
-                Text(sale.saleNumber.ifBlank { "Sale" }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(sale.saleNumber.ifBlank { "Sale" }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 Text(customer?.name ?: if (sale.customerId == null) "Walk-in customer" else "Customer #${sale.customerId.take(8)}", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(formatLagosDateTime(sale.soldAt), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -99,7 +99,7 @@ import com.everybuy.mobile.data.SaleItemDto
         Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text("Sale total", style = MaterialTheme.typography.titleSmall)
-                Text(formatNaira(sale.itemsTotal), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+                Text(formatNaira(sale.itemsTotal), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Paid"); Text(formatNaira(paid.toPlainString())) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Balance"); Text(formatNaira(balance.toPlainString()), fontWeight = FontWeight.SemiBold) }
             }

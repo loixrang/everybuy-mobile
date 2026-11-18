@@ -116,7 +116,7 @@ import java.math.BigDecimal
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
-                Text(statement.customer.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(statement.customer.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 Text(statement.customer.phone?.takeIf { it.isNotBlank() } ?: "No phone number on record", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             CustomerStatusBadge(statement.customer.active)
@@ -125,7 +125,7 @@ import java.math.BigDecimal
         state.success?.let { success ->
             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Repayment recorded", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text("Repayment recorded", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     Text(
                         "${formatNaira(success.amount)} applied to sale ${saleShortReference(success.saleId)}. The balances below are current.",
                         style = MaterialTheme.typography.bodySmall,
@@ -138,7 +138,7 @@ import java.math.BigDecimal
         Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Balance owed", style = MaterialTheme.typography.titleSmall)
-                Text(formatNaira(statement.totals.outstandingDebt), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+                Text(formatNaira(statement.totals.outstandingDebt), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold)
                 Text(
                     if (outstanding.isEmpty()) "All sales are fully paid" else "${outstanding.size} outstanding sale${if (outstanding.size == 1) "" else "s"}",
                     style = MaterialTheme.typography.bodySmall,

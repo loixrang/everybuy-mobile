@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -85,8 +83,7 @@ private fun AuditContent(
     modifier: Modifier = Modifier,
 ) {
     val filtered = state.filtered
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 320.dp),
+    LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
             start = 16.dp,
@@ -94,21 +91,20 @@ private fun AuditContent(
             top = padding.calculateTopPadding() + 4.dp,
             bottom = padding.calculateBottomPadding() + 24.dp,
         ),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item {
             ExpressiveSearchField(
                 value = state.query,
                 onValueChange = viewModel::setQuery,
                 placeholder = stringResource(R.string.audit_search),
             )
         }
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item {
             SectionHeader(title = stringResource(R.string.audit_title))
         }
         if (filtered.isEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
+            item {
                 EmptyPane(
                     title = if (state.entries.isEmpty()) {
                         stringResource(R.string.audit_empty)

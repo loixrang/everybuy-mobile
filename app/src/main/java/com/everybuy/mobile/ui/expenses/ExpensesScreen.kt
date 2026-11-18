@@ -1,6 +1,7 @@
 package com.everybuy.mobile.ui.expenses
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,10 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -59,6 +57,7 @@ import com.everybuy.mobile.ui.components.LoadingPane
 import com.everybuy.mobile.ui.components.SectionHeader
 import com.everybuy.mobile.ui.components.StatTile
 import com.everybuy.mobile.ui.components.TonalCard
+import com.everybuy.mobile.ui.components.listBottomPadding
 import com.everybuy.mobile.ui.reports.currentLagosMonth
 import com.everybuy.mobile.ui.reports.formatMonthLabel
 import java.math.BigDecimal
@@ -145,40 +144,18 @@ private fun ExpensesContent(
 ) {
     val thisMonth = currentLagosMonth()
     val filtered = state.filtered
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 320.dp),
+    LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
             top = padding.calculateTopPadding() + 4.dp,
-            bottom = padding.calculateBottomPadding() + 104.dp,
+            bottom = padding.calculateBottomPadding() + listBottomPadding(extra = 96.dp),
         ),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                StatTile(
-                    label = stringResource(R.string.expenses_this_month),
-                    value = formatNaira(expenseTotal(state.expenses, thisMonth).toPlainString()),
-                    supporting = formatMonthLabel(thisMonth),
-                    modifier = Modifier.weight(1f),
-                )
-                StatTile(
-                    label = stringResource(R.string.expenses_all_recorded),
-                    value = formatNaira(expenseTotal(state.expenses).toPlainString()),
-                    supporting = stringResource(R.string.expenses_all_recorded_body),
-                    modifier = Modifier.weight(1f),
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                )
-            }
-        }
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item { ExpenseSummaryTiles(state, thisMonth) }
+        item {
             StatTile(
                 label = stringResource(R.string.expenses_entries),
                 value = state.expenses.size.toString(),
@@ -193,7 +170,7 @@ private fun ExpensesContent(
             )
         }
         state.successMessage?.let { message ->
-            item(span = { GridItemSpan(maxLineSpan) }) {
+            item {
                 TonalCard(
                     modifier = Modifier.fillMaxWidth(),
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -216,14 +193,14 @@ private fun ExpensesContent(
                 }
             }
         }
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item {
             ExpressiveSearchField(
                 value = state.query,
                 onValueChange = viewModel::setQuery,
                 placeholder = stringResource(R.string.expenses_search),
             )
         }
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item {
             SectionHeader(
                 title = if (filtered.isEmpty()) {
                     stringResource(R.string.expenses_entries)
@@ -237,7 +214,7 @@ private fun ExpensesContent(
             )
         }
         if (filtered.isEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
+            item {
                 EmptyPane(
                     title = if (state.expenses.isEmpty()) {
                         stringResource(R.string.expenses_empty)
@@ -254,6 +231,41 @@ private fun ExpensesContent(
         } else {
             items(filtered, key = { it.id }) { expense ->
                 ExpenseCard(expense, Modifier.animateItem())
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExpenseSummaryTiles(state: ExpensesState.Ready, month: String) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val monthTile: @Composable (Modifier) -> Unit = { modifier ->
+            StatTile(
+                label = stringResource(R.string.expenses_this_month),
+                value = formatNaira(expenseTotal(state.expenses, month).toPlainString()),
+                supporting = formatMonthLabel(month),
+                modifier = modifier,
+            )
+        }
+        val totalTile: @Composable (Modifier) -> Unit = { modifier ->
+            StatTile(
+                label = stringResource(R.string.expenses_all_recorded),
+                value = formatNaira(expenseTotal(state.expenses).toPlainString()),
+                supporting = stringResource(R.string.expenses_all_recorded_body),
+                modifier = modifier,
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+        }
+        if (maxWidth >= 612.dp) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                monthTile(Modifier.weight(1f))
+                totalTile(Modifier.weight(1f))
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                monthTile(Modifier.fillMaxWidth())
+                totalTile(Modifier.fillMaxWidth())
             }
         }
     }
@@ -288,7 +300,7 @@ private fun ExpenseCard(expense: ExpenseDto, modifier: Modifier = Modifier) {
                 Text(
                     text = formatNaira(expense.amount),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
             expense.notes?.takeIf { it.isNotBlank() }?.let {

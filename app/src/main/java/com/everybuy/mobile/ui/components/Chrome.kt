@@ -2,29 +2,33 @@ package com.everybuy.mobile.ui.components
 
 import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,19 +36,24 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.everybuy.mobile.R
+import androidx.graphics.shapes.Morph
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeEffect
@@ -60,6 +69,8 @@ val LocalBottomChromeHeight = compositionLocalOf { 0.dp }
 
 /** True when the window is medium/expanded and the shell is showing a navigation rail. */
 val LocalNavigationRailVisible = compositionLocalOf { false }
+val LocalCycleTheme = compositionLocalOf<(() -> Unit)?> { null }
+val LocalOpenSettings = compositionLocalOf<(() -> Unit)?> { null }
 
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
@@ -95,7 +106,6 @@ fun EverybuyScreen(
     subtitle: String?,
     onOpenSettings: (() -> Unit)?,
     modifier: Modifier = Modifier,
-    compactHeader: Boolean = false,
     onBack: (() -> Unit)? = null,
     onRefresh: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
@@ -104,124 +114,60 @@ fun EverybuyScreen(
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val haze = LocalAppHazeState.current
+    val openSettings = onOpenSettings ?: LocalOpenSettings.current
     Scaffold(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            if (compactHeader) {
-                TopAppBar(
-                    title = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
-                                Text(
-                                    text = title,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.titleLargeEmphasized,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                if (subtitle != null) {
-                                    Text(
-                                        text = subtitle,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                            if (onOpenSettings != null) {
-                                AccountAvatarButton(onClick = onOpenSettings, name = subtitle.orEmpty())
-                            }
-                        }
-                    },
-                    navigationIcon = {
-                        if (onBack != null) {
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    Icons.AutoMirrored.Rounded.ArrowBack,
-                                    contentDescription = stringResource(R.string.action_back),
-                                )
-                            }
-                        }
-                    },
-                    actions = {
-                        if (onRefresh != null) {
-                            IconButton(onClick = onRefresh) {
-                                Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.action_refresh))
-                            }
-                        }
-                        actions()
-                    },
-                    scrollBehavior = scrollBehavior,
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        scrolledContainerColor = Color.Transparent,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                    modifier = Modifier.glass(haze),
-                )
-            } else {
-                LargeFlexibleTopAppBar(
-                    title = {
+            TopAppBar(
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CookieBrandMark()
                         Text(
-                            text = title,
+                            text = stringResource(R.string.app_name),
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
-                    },
-                    subtitle = subtitle?.let {
-                        {
-                            Text(
-                                text = it,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                    }
+                },
+                navigationIcon = {
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back))
                         }
-                    },
-                    navigationIcon = {
-                        if (onBack != null) {
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    Icons.AutoMirrored.Rounded.ArrowBack,
-                                    contentDescription = stringResource(R.string.action_back),
-                                )
-                            }
+                    }
+                },
+                actions = {
+                    if (onRefresh != null) {
+                        IconButton(onClick = onRefresh) {
+                            Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.action_refresh))
                         }
-                    },
-                    actions = {
-                        if (onRefresh != null) {
-                            IconButton(onClick = onRefresh) {
-                                Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.action_refresh))
-                            }
+                    }
+                    actions()
+                    LocalCycleTheme.current?.let { cycleTheme ->
+                        IconButton(onClick = cycleTheme) {
+                            Icon(Icons.Rounded.DarkMode, contentDescription = stringResource(R.string.action_cycle_theme))
                         }
-                        actions()
-                        if (onOpenSettings != null) {
-                            AccountAvatarButton(onClick = onOpenSettings, name = subtitle.orEmpty())
+                    }
+                    if (openSettings != null) {
+                        IconButton(onClick = openSettings) {
+                            Icon(Icons.Rounded.AccountCircle, contentDescription = stringResource(R.string.action_open_settings))
                         }
-                    },
-                    scrollBehavior = scrollBehavior,
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        scrolledContainerColor = Color.Transparent,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                    modifier = Modifier.glass(haze),
-                )
-            }
+                    }
+                },
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+                modifier = Modifier.glass(haze),
+            )
         },
         floatingActionButton = {
             if (floatingActionButton != null) {
@@ -231,44 +177,68 @@ fun EverybuyScreen(
             }
         },
     ) { padding ->
-        androidx.compose.foundation.layout.Box(
-            Modifier
-                .fillMaxSize()
-                .then(if (haze != null) Modifier.hazeSource(haze) else Modifier),
-            contentAlignment = Alignment.TopCenter,
+        Column(
+            Modifier.fillMaxSize().then(if (haze != null) Modifier.hazeSource(haze) else Modifier),
         ) {
             androidx.compose.foundation.layout.Box(
-                Modifier
-                    .fillMaxHeight()
-                    .widthIn(max = 840.dp)
-                    .fillMaxWidth(),
+                Modifier.fillMaxWidth().weight(1f).padding(top = padding.calculateTopPadding()),
+                contentAlignment = Alignment.TopCenter,
             ) {
-                content(padding)
+                Column(Modifier.fillMaxHeight().widthIn(max = 840.dp).fillMaxWidth()) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        subtitle?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                    androidx.compose.foundation.layout.Box(
+                        Modifier.fillMaxWidth().weight(1f),
+                        contentAlignment = Alignment.TopCenter,
+                    ) { content(PaddingValues(0.dp)) }
+                }
             }
         }
     }
 }
 
 @Composable
-fun AccountAvatarButton(onClick: () -> Unit, name: String = "") {
-    val description = stringResource(R.string.action_open_settings)
-    Surface(
-        onClick = onClick,
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        modifier = Modifier
-            .padding(end = 8.dp)
-            .size(48.dp)
-            .semantics { contentDescription = description },
-    ) {
-        androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = name.trim().firstOrNull()?.uppercase() ?: "E",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private fun CookieBrandMark() {
+    val morph = remember { Morph(MaterialShapes.Cookie9Sided, MaterialShapes.Cookie12Sided) }
+    val containerColor = MaterialTheme.colorScheme.primaryContainer
+    val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val path = morph.toPath(0.5f)
+            withTransform({
+                translate(size.width / 2f, size.height / 2f)
+                scale(size.minDimension / 2f, size.minDimension / 2f, pivot = Offset.Zero)
+            }) {
+                drawPath(path, containerColor)
+            }
         }
+        Icon(
+            Icons.Rounded.ShoppingBag,
+            contentDescription = null,
+            tint = contentColor,
+            modifier = Modifier.size(16.dp),
+        )
     }
 }
 

@@ -81,7 +81,7 @@ import com.everybuy.mobile.data.SupplierDto
             }
             SuppliersAdminState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
             is SuppliersAdminState.Forbidden -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Text(current.message, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(current.message, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             }
             is SuppliersAdminState.Failed -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 Text(current.message, color = MaterialTheme.colorScheme.error)
@@ -102,7 +102,7 @@ import com.everybuy.mobile.data.SupplierDto
                 if (current.actionError != null) FeedbackCard(current.actionError, true) { viewModel.clearFeedback() }
                 if (current.suppliers.isEmpty()) {
                     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                        Text("No suppliers yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("No suppliers yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text("Add the first supplier so stock receipts can name who supplied them.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
                     }
                 } else {

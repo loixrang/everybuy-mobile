@@ -10,10 +10,13 @@ import java.util.Locale
 
 private val nairaFormatter: NumberFormat = NumberFormat.getCurrencyInstance(Locale("en", "NG")).apply {
     currency = Currency.getInstance("NGN")
+    minimumFractionDigits = 0
     maximumFractionDigits = 2
 }
 
-fun formatNaira(amount: String): String = runCatching { nairaFormatter.format(BigDecimal(amount)) }.getOrDefault("₦$amount")
+fun formatNaira(amount: String): String = runCatching {
+    synchronized(nairaFormatter) { nairaFormatter.format(BigDecimal(amount)) }
+}.getOrDefault("₦$amount")
 
 fun formatLagosDateTime(isoDateTime: String): String = runCatching {
     DateTimeFormatter.ofPattern("d MMM, h:mm a", Locale("en", "NG")).withZone(ZoneId.of("Africa/Lagos")).format(Instant.parse(isoDateTime))

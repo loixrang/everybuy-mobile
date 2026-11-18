@@ -217,16 +217,17 @@ fun StatTile(
             Text(
                 text = value,
                 style = MaterialTheme.typography.headlineMediumEmphasized,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = contentColor,
-                maxLines = 2,
+                maxLines = 1,
+                softWrap = false,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = supporting,
                 style = MaterialTheme.typography.bodySmall,
                 color = contentColor.copy(alpha = 0.82f),
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }

@@ -33,7 +33,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable fun ForgotPasswordScreen(onBack: () -> Unit, viewModel: ForgotPasswordViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.Center) {
-        Text("Reset your password", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("Reset your password", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text(
             "Enter the email address on your Everybuy account and we will send a reset link. The link expires after one hour.",
             style = MaterialTheme.typography.bodyMedium,
@@ -81,7 +81,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
     val invalidLink = token.isNullOrBlank() || linkError != null
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.Center) {
         if (state.done) {
-            Text("Password updated", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("Password updated", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
             Text(
                 "Sign in with your new password. Other sessions were signed out.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -92,7 +92,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
             return@Column
         }
         if (invalidLink) {
-            Text("Reset link not valid", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("Reset link not valid", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
             Text(
                 if (linkError == "INVALID_TOKEN") "This reset link is invalid or has expired."
                 else "This page needs a reset token from the email link.",
@@ -109,7 +109,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
             Button(onClick = onBackToSignIn, modifier = Modifier.fillMaxWidth().padding(top = 20.dp)) { Text("Request a new link") }
             return@Column
         }
-        Text("Choose a new password", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("Choose a new password", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text(
             "Use between $PASSWORD_MIN and $PASSWORD_MAX characters.",
             style = MaterialTheme.typography.bodyMedium,
@@ -149,7 +149,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
     LaunchedEffect(token) { token?.takeIf { it.isNotBlank() }?.let(viewModel::load) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.Center) {
         if (token.isNullOrBlank()) {
-            Text("Invitation not available", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("Invitation not available", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
             Text(
                 "This invitation link is missing its token. Open the full link from your invitation email, or ask an owner for a new invitation.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -165,12 +165,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
                 Text("Checking your invitation…", Modifier.padding(top = 12.dp))
             }
             is InviteAcceptState.Invalid -> {
-                Text("Invitation not available", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Invitation not available", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 Text(current.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
                 Button(onClick = onDone, modifier = Modifier.fillMaxWidth().padding(top = 20.dp)) { Text("Back to sign in") }
             }
             is InviteAcceptState.Failed -> {
-                Text("Could not load invitation", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Could not load invitation", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 Text(current.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
                 Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { viewModel.retry() }) { Text("Retry") }
@@ -178,12 +178,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
                 }
             }
             is InviteAcceptState.Done -> {
-                Text("Welcome to Everybuy", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Welcome to Everybuy", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 Text("Your staff account for ${current.email} is ready. Sign in with the password you just chose.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
                 Button(onClick = onDone, modifier = Modifier.fillMaxWidth().padding(top = 20.dp)) { Text("Back to sign in") }
             }
             is InviteAcceptState.Ready -> {
-                Text("Join Everybuy", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Join Everybuy", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 Text(
                     "${current.preview.name.ifBlank { "You" }} (${current.preview.email}) were invited to join the shop as staff.",
                     style = MaterialTheme.typography.bodyMedium,

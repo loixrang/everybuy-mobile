@@ -84,7 +84,7 @@ import com.everybuy.mobile.data.StockMovementDto
         Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = if (positive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)) {
             Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(movementLabel(movement), style = MaterialTheme.typography.titleMedium)
-                Text("${if (positive) "+" else ""}${movement.changePacks} packs", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+                Text("${if (positive) "+" else ""}${movement.changePacks} packs", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold)
                 Text(formatLagosDateTime(movement.createdAt), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }

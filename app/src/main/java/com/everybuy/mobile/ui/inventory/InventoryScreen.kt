@@ -10,10 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -76,7 +73,6 @@ fun InventoryScreen(
         title = stringResource(R.string.inventory_title),
         subtitle = user.name.ifBlank { user.email },
         onOpenSettings = onOpenSettings,
-        compactHeader = true,
         floatingActionButton = if (isOwner) {
             {
                 ExtendedFloatingActionButton(
@@ -112,21 +108,17 @@ fun InventoryScreen(
                         "${product.name} ${product.packName} ${product.size.orEmpty()} ${categoryNames[product.categoryId].orEmpty()} ${brandNames[product.brandId].orEmpty()}"
                             .contains(search.trim(), ignoreCase = true)
                 }
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 320.dp),
+                LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
                         top = padding.calculateTopPadding() + 4.dp,
-                        bottom = padding.calculateBottomPadding() + listBottomPadding(
-                            extra = 16.dp,
-                        ),
+                        bottom = padding.calculateBottomPadding() + listBottomPadding(extra = 96.dp),
                     ),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
+                    item {
                         ExpressiveSearchField(
                             value = search,
                             onValueChange = { search = it },
@@ -134,7 +126,7 @@ fun InventoryScreen(
                         )
                     }
                     if (inventory.categories.isNotEmpty()) {
-                        item(span = { GridItemSpan(maxLineSpan) }) {
+                        item {
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 item {
                                     FilterChip(
@@ -159,7 +151,7 @@ fun InventoryScreen(
                             }
                         }
                     }
-                    item(span = { GridItemSpan(maxLineSpan) }) {
+                    item {
                         SectionHeader(
                             title = pluralStringResource(R.plurals.inventory_products_count, filtered.size, filtered.size),
                             supporting = if (search.isBlank() && categoryFilter == "ALL") {
@@ -168,7 +160,7 @@ fun InventoryScreen(
                         )
                     }
                     if (filtered.isEmpty()) {
-                        item(span = { GridItemSpan(maxLineSpan) }) {
+                        item {
                             EmptyPane(
                                 title = if (search.isBlank()) stringResource(R.string.inventory_empty) else stringResource(R.string.inventory_no_matches),
                                 body = stringResource(R.string.inventory_search),
@@ -211,42 +203,42 @@ private fun ProductCard(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         onClick = onClick,
     ) {
-        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Column(Modifier.weight(1f)) {
+        Row(
+            Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (metadata.isNotBlank()) {
                     Text(
-                        text = product.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        text = metadata,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    if (metadata.isNotBlank()) {
-                        Text(
-                            text = metadata,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
                 }
-                TonalBadge(
-                    text = stringResource(R.string.inventory_packs_in_stock).let { label -> "${product.stockPacks} $label" },
-                    containerColor = if (lowStock) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = if (lowStock) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-            }
-            Spacer(Modifier.height(2.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
                 Text(
                     text = stringResource(R.string.inventory_price_per_bag, formatNaira(product.bagPrice)),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                TonalBadge(
+                    text = pluralStringResource(R.plurals.overview_pack_count, product.stockPacks, product.stockPacks),
+                    containerColor = if (lowStock) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = if (lowStock) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 if (lowStock) {
                     TonalBadge(

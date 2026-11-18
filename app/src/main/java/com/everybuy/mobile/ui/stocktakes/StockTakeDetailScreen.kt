@@ -161,7 +161,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                     Column(Modifier.weight(1f)) {
-                        Text(if (draft) "Count stock" else detail.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(if (draft) "Count stock" else detail.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                         Text(detail.reference, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (!draft) Text(detail.createdAt?.let { "Started ${formatLagosDateTime(it)}" } ?: detail.name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -208,7 +208,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), shape = RoundedCornerShape(20.dp)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Stocktake approved", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Stocktake approved", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(detail.finalizedAt?.let { "Stock balances were updated on ${formatLagosDateTime(it)}. Each difference is recorded as an adjustment in the movement ledger." } ?: "Stock balances were updated and the differences were recorded as adjustments.", style = MaterialTheme.typography.bodySmall)
                     }
                 }
@@ -219,7 +219,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Stocktake cancelled", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Stocktake cancelled", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text("No stock balances were changed.", style = MaterialTheme.typography.bodySmall)
                     }
                 }
@@ -246,7 +246,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
         if (detail.items.isEmpty()) {
             item {
                 Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("No products in this stocktake", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("No products in this stocktake", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text("The stocktake was created when no active products existed. Add a product, then start a new stocktake.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
                 }
             }
