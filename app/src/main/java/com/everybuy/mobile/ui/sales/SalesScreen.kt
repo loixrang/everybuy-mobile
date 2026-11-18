@@ -25,7 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,7 +40,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.everybuy.mobile.R
 import com.everybuy.mobile.core.util.formatLagosDateTime
 import com.everybuy.mobile.core.util.formatNaira
@@ -186,7 +185,7 @@ fun SalesScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            TextButton(onClick = {
+                            FilledTonalButton(onClick = {
                                 query = ""
                                 status = null
                                 from = ""

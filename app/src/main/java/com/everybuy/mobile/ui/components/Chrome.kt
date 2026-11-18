@@ -6,11 +6,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -159,16 +162,26 @@ fun EverybuyScreen(
         floatingActionButton = {
             if (floatingActionButton != null) {
                 androidx.compose.foundation.layout.Box(
-                    Modifier.padding(bottom = LocalBottomChromeHeight.current + 16.dp),
+                    Modifier.padding(bottom = listBottomPadding(extra = 16.dp)),
                 ) { floatingActionButton() }
             }
         },
     ) { padding ->
         androidx.compose.foundation.layout.Box(
             Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .then(if (haze != null) Modifier.hazeSource(haze) else Modifier),
-        ) { content(padding) }
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            androidx.compose.foundation.layout.Box(
+                Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = 840.dp)
+                    .fillMaxWidth(),
+            ) {
+                content(padding)
+            }
+        }
     }
 }
 
@@ -182,7 +195,7 @@ fun AccountAvatarButton(onClick: () -> Unit, name: String = "") {
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         modifier = Modifier
             .padding(end = 8.dp)
-            .size(40.dp)
+            .size(48.dp)
             .semantics { contentDescription = description },
     ) {
         androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {

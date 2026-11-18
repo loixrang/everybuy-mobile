@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Assessment
 import androidx.compose.material.icons.rounded.Inventory2
@@ -17,6 +18,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ShortNavigationBar
+import androidx.compose.material3.ShortNavigationBarArrangement
 import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.WideNavigationRail
@@ -89,29 +91,6 @@ private val destinations = listOf(
 
 private val mainRoutes = destinations.map { it.route }.toSet()
 
-private val fullScreenRoutes = setOf(
-    "inventory/product/{productId}",
-    "inventory/new",
-    "inventory/product/{productId}/edit",
-    "inventory/product/{productId}/receive",
-    "movements",
-    "movements/{movementId}",
-    "movements/product/{productId}",
-    "stocktakes",
-    "stocktakes/{stockTakeId}",
-    "sales/new",
-    "sales/{saleId}",
-    "customers/new",
-    "customers/{customerId}",
-    "customers/{customerId}/edit",
-    "expenses",
-    "audit",
-    "settings",
-    "settings/team",
-    "settings/catalog",
-    "settings/suppliers",
-)
-
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AuthenticatedApp(
@@ -124,7 +103,7 @@ fun AuthenticatedApp(
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val destination = backStack?.destination
-    val showChrome = destination?.route !in fullScreenRoutes
+    val showChrome = destination?.route in mainRoutes
     val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
     val widthAtLeastMedium = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
     val widthAtLeastExpanded = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
@@ -164,7 +143,6 @@ fun AuthenticatedApp(
                     windowInsets = WindowInsets.systemBars,
                 ) {
                     NavigationRailItems(
-                        selectedRoute = destination?.route,
                         selectedHierarchy = destination,
                         railExpanded = widthAtLeastExpanded,
                         onNavigate = ::navigateTo,
@@ -194,31 +172,41 @@ fun AuthenticatedApp(
                     onOpenSettings = { navController.navigate("settings") },
                 )
                 if (showChrome) {
-                    ShortNavigationBar(
-                        modifier = Modifier
+                    Box(
+                        Modifier
                             .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .glass(hazeState),
-                        containerColor = Color.Transparent,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
+                            .fillMaxWidth(),
                     ) {
-                        destinations.forEach { item ->
-                            val selected = destination?.hierarchy?.any { it.route == item.route } == true
-                            val label = stringResource(item.labelRes)
-                            ShortNavigationBarItem(
-                                selected = selected,
-                                onClick = { navigateTo(item.route) },
-                                icon = { Icon(item.icon, contentDescription = label) },
-                                label = {
-                                    Text(
-                                        text = label,
-                                        maxLines = 1,
-                                        softWrap = false,
-                                        overflow = TextOverflow.Visible,
-                                        style = MaterialTheme.typography.labelMedium,
-                                    )
-                                },
-                            )
+                        Box(
+                            Modifier
+                                .matchParentSize()
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
+                                .glass(hazeState),
+                        )
+                        ShortNavigationBar(
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = Color.Transparent,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            arrangement = ShortNavigationBarArrangement.EqualWeight,
+                        ) {
+                            destinations.forEach { item ->
+                                val selected = destination?.hierarchy?.any { it.route == item.route } == true
+                                val label = stringResource(item.labelRes)
+                                ShortNavigationBarItem(
+                                    selected = selected,
+                                    onClick = { navigateTo(item.route) },
+                                    icon = { Icon(item.icon, contentDescription = label) },
+                                    label = {
+                                        Text(
+                                            text = label,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            overflow = TextOverflow.Visible,
+                                            style = MaterialTheme.typography.labelSmall,
+                                        )
+                                    },
+                                )
+                            }
                         }
                     }
                 }
@@ -229,7 +217,6 @@ fun AuthenticatedApp(
 
 @Composable
 private fun NavigationRailItems(
-    selectedRoute: String?,
     selectedHierarchy: androidx.navigation.NavDestination?,
     railExpanded: Boolean,
     onNavigate: (String) -> Unit,
