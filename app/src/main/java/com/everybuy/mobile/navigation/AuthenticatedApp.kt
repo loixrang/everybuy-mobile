@@ -300,7 +300,11 @@ private fun NavGraph(
     onOpenSettings: () -> Unit,
     modifier: Modifier,
 ) {
-    NavHost(navController, startDestination = "inventory", modifier = modifier) {
+    NavHost(
+        navController,
+        startDestination = "inventory",
+        modifier = modifier.background(MaterialTheme.colorScheme.surface),
+    ) {
         composable("inventory") {
             InventoryScreen(
                 user = user,
