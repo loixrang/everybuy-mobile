@@ -33,6 +33,45 @@ fun apiBaseUrl(raw: String): String {
 
 val debugApiBaseUrl = apiBaseUrl(prop("everybuy.apiBaseUrl", "http://10.0.2.2:3000"))
 val releaseApiBaseUrl = apiBaseUrl(prop("everybuy.apiBaseUrlRelease", "https://api.everybuy.app"))
+val versionCodeProperty = providers.gradleProperty("everybuy.versionCode").orNull
+val appVersionCode = versionCodeProperty?.toIntOrNull()
+    ?: if (versionCodeProperty == null) 1 else error("everybuy.versionCode must be an integer")
+val appVersionName = providers.gradleProperty("everybuy.versionName").orElse("1.0").get()
+
+require(appVersionCode in 1..2_100_000_000) {
+    "everybuy.versionCode must be between 1 and 2100000000"
+}
+require(appVersionName.isNotBlank()) { "everybuy.versionName must not be empty" }
+
+val releaseStoreFile = providers.environmentVariable("EVERYBUY_STORE_FILE").orNull
+val releaseStorePassword = providers.environmentVariable("EVERYBUY_STORE_PASSWORD").orNull
+val releaseKeyAlias = providers.environmentVariable("EVERYBUY_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.environmentVariable("EVERYBUY_KEY_PASSWORD").orNull
+val releaseSigningConfigured = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { !it.isNullOrBlank() }
+val validateReleaseSigning = tasks.register("validateReleaseSigning") {
+    doLast {
+        val missing = buildList {
+            if (releaseStoreFile.isNullOrBlank()) add("EVERYBUY_STORE_FILE")
+            else if (!file(releaseStoreFile).isFile) add("keystore file")
+            if (releaseStorePassword.isNullOrBlank()) add("EVERYBUY_STORE_PASSWORD")
+            if (releaseKeyAlias.isNullOrBlank()) add("EVERYBUY_KEY_ALIAS")
+            if (releaseKeyPassword.isNullOrBlank()) add("EVERYBUY_KEY_PASSWORD")
+        }
+        check(missing.isEmpty()) {
+            "Release signing is not configured (${missing.joinToString()}). " +
+                "Set the Android signing environment variables; see README.md → Publishing releases."
+        }
+    }
+}
+
+tasks.configureEach {
+    if (name == "preReleaseBuild") dependsOn(validateReleaseSigning)
+}
 
 android {
     namespace = "com.everybuy.mobile"
@@ -42,9 +81,29 @@ android {
         applicationId = "com.everybuy.mobile"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("release") {
+                storeFile = file(releaseStoreFile.orEmpty())
+                storePassword = releaseStorePassword.orEmpty()
+                keyAlias = releaseKeyAlias.orEmpty()
+                keyPassword = releaseKeyPassword.orEmpty()
+            }
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = true
+        }
     }
 
     buildTypes {
@@ -57,6 +116,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // Existing production API origin from the Android project release config.
             buildConfigField("String", "API_BASE_URL", "\"$releaseApiBaseUrl\"")

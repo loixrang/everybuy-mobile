@@ -68,10 +68,43 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x .github/scripts/version-from-tag.sh
-          eval "$(.github/scripts/version-from-tag.sh "$TAG")"
+          VERSION_OUTPUT="$(.github/scripts/version-from-tag.sh "$TAG")"
+          VERSION_NAME="$(sed -n 's/^VERSION_NAME=//p' <<< "$VERSION_OUTPUT")"
+          VERSION_CODE="$(sed -n 's/^VERSION_CODE=//p' <<< "$VERSION_OUTPUT")"
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_OUTPUT"
           echo "Using versionName=$VERSION_NAME versionCode=$VERSION_CODE"
+
+      - name: Ensure versionCode increases
+        id: releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+          VERSION_CODE: ${{ steps.version.outputs.VERSION_CODE }}
+        run: |
+          set -euo pipefail
+          RELEASE_TAGS="$(gh release list --limit 1000 --json tagName --jq '.[].tagName')" || {
+            echo "::error::Unable to read published GitHub releases to validate versionCode."
+            exit 1
+          }
+          PREVIOUS_RELEASE_TAG=""
+          while IFS= read -r previous_tag; do
+            [[ -z "$previous_tag" || "$previous_tag" == "$TAG" ]] && continue
+            if [[ -z "$PREVIOUS_RELEASE_TAG" ]]; then
+              PREVIOUS_RELEASE_TAG="$previous_tag"
+            fi
+            if ! previous_version="$(.github/scripts/version-from-tag.sh "$previous_tag" 2>/dev/null)"; then
+              echo "::error::Existing published release '$previous_tag' does not use a supported stable version tag."
+              exit 1
+            fi
+            previous_code="$(sed -n 's/^VERSION_CODE=//p' <<< "$previous_version")"
+            if (( VERSION_CODE <= previous_code )); then
+              echo "::error::versionCode $VERSION_CODE must be greater than published release '$previous_tag' (versionCode $previous_code)."
+              exit 1
+            fi
+          done <<< "$RELEASE_TAGS"
+          echo "previous_tag=$PREVIOUS_RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "versionCode $VERSION_CODE is greater than all previous published releases."
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -82,7 +115,9 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
-          packages: platform-tools platforms;android-37 build-tools;35.0.0
+          packages: |
+            platform-tools
+            platforms;android-37
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -91,26 +126,25 @@ jobs:
           validate-wrappers: true
 
       - name: Decode release keystore
-        id: keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           set -euo pipefail
           KEYSTORE_PATH="${RUNNER_TEMP}/everybuy-release.jks"
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
           if [[ ! -s "$KEYSTORE_PATH" ]]; then
             echo "::error::Decoded keystore is empty. Check ANDROID_KEYSTORE_BASE64."
             exit 1
           fi
           chmod 600 "$KEYSTORE_PATH"
-          echo "path=$KEYSTORE_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Run unit tests
         run: ./gradlew --no-daemon --stacktrace testDebugUnitTest
 
       - name: Build signed release APKs
         env:
-          EVERYBUY_STORE_FILE: ${{ steps.keystore.outputs.path }}
+          EVERYBUY_STORE_FILE: ${{ runner.temp }}/everybuy-release.jks
           EVERYBUY_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           EVERYBUY_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           EVERYBUY_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -165,21 +199,20 @@ jobs:
             exit 1
           fi
 
-          # Prefer apksigner when build-tools are on PATH; fall back to jarsigner.
-          if command -v apksigner >/dev/null 2>&1; then
-            apksigner verify --print-certs "$UNIVERSAL"
-          else
-            BUILD_TOOLS="$(ls -d "${ANDROID_SDK_ROOT:-$ANDROID_HOME}"/build-tools/* | sort -V | tail -n1)"
-            if [[ -x "$BUILD_TOOLS/apksigner" ]]; then
-              "$BUILD_TOOLS/apksigner" verify --print-certs "$UNIVERSAL"
-            else
-              jarsigner -verify -verbose -certs "$UNIVERSAL" | tee /tmp/jarsigner-out.txt
-              if grep -qi 'jar is unsigned\|no manifest' /tmp/jarsigner-out.txt; then
-                echo "::error::Release APK is unsigned. Check signing secrets and Gradle signingConfig."
-                exit 1
-              fi
+          APKSIGNER="$(command -v apksigner || true)"
+          if [[ -z "$APKSIGNER" ]]; then
+            SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+            if [[ -n "$SDK_ROOT" && -d "$SDK_ROOT/build-tools" ]]; then
+              APKSIGNER="$(find "$SDK_ROOT/build-tools" -type f -name apksigner -print | sort -V | tail -n1)"
             fi
           fi
+          if [[ -z "$APKSIGNER" || ! -x "$APKSIGNER" ]]; then
+            echo "::error::Android apksigner was not found; cannot verify release APK signatures."
+            exit 1
+          fi
+          for apk in "${APKS[@]}"; do
+            "$APKSIGNER" verify --print-certs "$apk"
+          done
 
           {
             echo "universal=$UNIVERSAL"
@@ -192,11 +225,13 @@ jobs:
         env:
           TAG: ${{ github.event.release.tag_name }}
           VERSION_NAME: ${{ steps.version.outputs.VERSION_NAME }}
+          PREVIOUS_RELEASE_TAG: ${{ steps.releases.outputs.previous_tag }}
+          DIST_DIR: ${{ steps.apks.outputs.dir }}
         run: |
           set -euo pipefail
           chmod +x .github/scripts/extract-changelog.sh
-          OUT="${{ steps.apks.outputs.dir }}/CHANGELOG-${TAG}.md"
-          .github/scripts/extract-changelog.sh "$VERSION_NAME" "$TAG" "$OUT"
+          OUT="${DIST_DIR}/CHANGELOG-${TAG}.md"
+          .github/scripts/extract-changelog.sh "$VERSION_NAME" "$TAG" "$OUT" CHANGELOG.md "$PREVIOUS_RELEASE_TAG"
           echo "path=$OUT" >> "$GITHUB_OUTPUT"
 
       - name: Upload assets and update release notes
@@ -219,11 +254,10 @@ jobs:
 
       - name: Clean up keystore
         if: always()
-        env:
-          KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
         run: |
           set -euo pipefail
-          if [[ -n "${KEYSTORE_PATH:-}" && -f "$KEYSTORE_PATH" ]]; then
+          KEYSTORE_PATH="${RUNNER_TEMP}/everybuy-release.jks"
+          if [[ -f "$KEYSTORE_PATH" ]]; then
             shred -u "$KEYSTORE_PATH" 2>/dev/null || rm -f "$KEYSTORE_PATH"
           fi
           rm -rf "${RUNNER_TEMP}/dist" 2>/dev/null || true

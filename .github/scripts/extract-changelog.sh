@@ -8,6 +8,7 @@ VERSION="${1:?version required (e.g. 1.0.0)}"
 TAG="${2:?tag required (e.g. v1.0.0)}"
 OUT_FILE="${3:?output file required}"
 CHANGELOG_FILE="${4:-CHANGELOG.md}"
+PREVIOUS_RELEASE_TAG="${5:-}"
 
 extract_section() {
   local file="$1"
@@ -15,7 +16,7 @@ extract_section() {
   awk -v heading="$heading" '
     BEGIN { grab=0 }
     /^## \[/{
-      if ($0 ~ "^## \\[" heading "\\]") { grab=1; next }
+      if ($0 == "## [" heading "]") { grab=1; next }
       else if (grab) { exit }
     }
     grab { print }
@@ -39,9 +40,12 @@ if [[ -z "${NOTES//[[:space:]]/}" ]]; then
   echo "No CHANGELOG.md section found for [$VERSION]. Falling back to git history between tags." >&2
   echo "Tip: move ## [Unreleased] entries into ## [$VERSION] before publishing." >&2
   if git rev-parse -q --verify "${TAG}^{commit}" >/dev/null 2>&1; then
-    PREV_TAG="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
-    if [[ -n "$PREV_TAG" ]]; then
-      RANGE="${PREV_TAG}..${TAG}"
+    if [[ -n "$PREVIOUS_RELEASE_TAG" ]]; then
+      if ! git rev-parse -q --verify "${PREVIOUS_RELEASE_TAG}^{commit}" >/dev/null 2>&1; then
+        echo "Previous published release tag '$PREVIOUS_RELEASE_TAG' is not available in this checkout." >&2
+        exit 1
+      fi
+      RANGE="${PREVIOUS_RELEASE_TAG}..${TAG}"
     else
       RANGE="$TAG"
     fi

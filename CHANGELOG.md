@@ -13,5 +13,9 @@ or `1.0.0`). The release workflow publishes only that version’s section.
 - Local NestJS development support for the Android emulator (`10.0.2.2`) and physical devices (LAN IP override), with cleartext HTTP limited to debug builds.
 - GitHub Actions release pipeline that tests, builds, signs and publishes release APKs plus a release changelog when a GitHub Release targeting `master` is published.
 
+### Changed
+
+### Fixed
+
 ### Improved
 - Release builds enable R8 code shrinking, resource shrinking and ABI splits with a universal APK for broad device support.
