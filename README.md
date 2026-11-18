@@ -89,41 +89,56 @@ The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Publishing releases
 
-The GitHub Actions release workflow runs **only** when a GitHub Release is published. It verifies that the release tag points to a commit reachable from `master`; releases from other branches stop before tests or builds. Pushes, pull requests, and tag pushes alone do not start a build.
+The GitHub Actions workflow runs only for the `published` release event. Pushes, pull requests, tag pushes, draft releases, and release edits do not start it. It reads the repository’s configured default branch from the release event and verifies that the tag commit is reachable from that branch before tests or builds.
 
-### Configure Android signing once
+### Configure signing with the existing keystore
 
-Create a dedicated production keystore on a trusted machine and retain it securely. Use the same keystore, key alias, and passwords for every future update; replacing the signing identity prevents existing installations from receiving in-place updates.
+Use the existing production keystore. Do not generate a replacement: users can install updates only when each release uses the same signing identity. Keep the keystore and its passwords in secure, backed-up storage; never commit them.
 
-For example, `keytool` can create the keystore locally (do not add it to Git):
+To list the aliases and certificate information in the keystore, run this locally and enter its password when prompted:
 
 ```bash
-keytool -genkeypair -v \
-  -keystore everybuy-release.jks \
-  -alias everybuy-release \
-  -keyalg RSA -keysize 2048 -validity 10000
-base64 < everybuy-release.jks | tr -d '\n'
+keytool -list -v -keystore /secure/path/to/existing-keystore.jks
 ```
 
-In the GitHub repository, open **Settings → Secrets and variables → Actions** and add these repository secrets:
+The output includes the key alias. Keystore and key passwords cannot be recovered from the keystore; obtain the existing values from secure records or the keystore maintainer. If the key password is the same as the keystore password, use that same value for both secrets.
+
+Convert the existing keystore to a single Base64 line on a trusted machine:
+
+```bash
+base64 < /secure/path/to/existing-keystore.jks | tr -d '\n'
+```
+
+In the GitHub repository, open **Settings → Secrets and variables → Actions** and add these repository secrets. Do not paste their values into source files, commits, or workflow logs.
 
 | Secret | Value |
 | --- | --- |
 | `ANDROID_KEYSTORE_BASE64` | The single-line Base64 output for the keystore |
-| `ANDROID_KEYSTORE_PASSWORD` | The keystore password |
-| `ANDROID_KEY_ALIAS` | The key alias (for the example above, `everybuy-release`) |
-| `ANDROID_KEY_PASSWORD` | The key password |
+| `ANDROID_KEYSTORE_PASSWORD` | The existing keystore password |
+| `ANDROID_KEY_ALIAS` | The existing key alias shown by `keytool -list` |
+| `ANDROID_KEY_PASSWORD` | The existing key password, or the same value as `ANDROID_KEYSTORE_PASSWORD` when they match |
 
-Keep the original keystore and its credentials in secure, backed-up storage. Never commit the keystore or passwords. The workflow fails with a clear error if any required secret is missing, and it does not publish an unsigned APK.
+The workflow validates all four secrets, decodes the keystore to a permission-restricted temporary file, and removes it even when a later step fails. It derives the expected certificate fingerprint from the configured alias and refuses to publish APKs signed by a different identity. `local.properties` remains gitignored and optional; CI obtains the Android SDK from the setup action and does not create or depend on `local.properties`.
 
 ### Prepare and publish a release
 
-1. Update `CHANGELOG.md` during development. Before releasing, move the completed user-facing items from `## [Unreleased]` into a version section such as `## [1.2.3]`, and start a fresh `## [Unreleased]` section. Keep entries concise and grouped under `Added`, `Changed`, `Fixed`, or `Improved`.
-2. Merge the changes into `master`.
-3. Create and push a stable version tag on the desired `master` commit, such as `v1.2.3`. Use stable `MAJOR.MINOR.PATCH` tags without prerelease/build suffixes. The workflow derives `versionName` and a monotonically increasing Android `versionCode` from this tag and rejects invalid or non-increasing versions.
-4. On GitHub, create a Release for that existing tag and publish it. Do not publish a release from a tag whose commit is not reachable from `master`.
+1. Keep `CHANGELOG.md` current during development. Before releasing, move the included user-facing changes from `## [Unreleased]` into a version section such as `## [1.2.3]`, then start a fresh `## [Unreleased]` section. Use concise entries under `Added`, `Changed`, `Fixed`, or `Improved`.
+2. Merge the release commit into the repository’s configured default branch (shown in **Settings → Branches**).
+3. From that branch, create and push a stable semantic-version tag:
 
-The workflow runs `testDebugUnitTest`, builds and verifies the signed optimized release APKs, then attaches the universal APK, the ABI-specific APKs, and `CHANGELOG-v1.2.3.md` to the same GitHub Release. The release description is updated with those version-specific changelog notes. If that version has no section in `CHANGELOG.md`, the workflow derives notes from commits since the preceding release tag; it never uses unrelated `Unreleased` entries. Download the APK assets from the **Assets** section of the published GitHub Release.
+   ```bash
+   DEFAULT_BRANCH="$(git remote show origin | sed -n 's/^  HEAD branch: //p')"
+   test -n "$DEFAULT_BRANCH"
+   git switch "$DEFAULT_BRANCH"
+   git pull --ff-only origin "$DEFAULT_BRANCH"
+   git tag -a v1.2.3 -m "Everybuy v1.2.3"
+   git push origin v1.2.3
+   ```
+
+   Supported tags are `MAJOR.MINOR.PATCH` (optionally prefixed with `v`), without prerelease/build suffixes. The workflow maps the tag deterministically to `versionName` and `versionCode`, and checks that the code exceeds every previously published stable release.
+4. On GitHub, create a Release using that existing tag and publish it. Drafts and edits do not run the pipeline.
+
+The workflow runs `testDebugUnitTest`, assembles the configured release variant, collects APKs from Android Gradle Plugin output metadata, and validates every APK with `apksigner` against the existing keystore’s certificate fingerprint. Current outputs are universal, ARM64, ARMv7, x86_64, and x86 APKs; filenames use the actual variants recorded by Gradle. It then uploads the versioned APKs and `CHANGELOG-v1.2.3.md` to that same release and updates its description with the generated notes. The changelog uses the matching version section when present; otherwise, the documented fallback lists Git commit subjects since the preceding published release (or all history for the first release), and fails if there are no changes to report. Its date comes from the GitHub release publication timestamp. Users can download the assets from the release’s **Assets** section.
 
 ## Current scope
 
