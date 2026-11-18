@@ -25,7 +25,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -91,7 +91,7 @@ import kotlinx.coroutines.launch
     }) { insets ->
         when (val current = state) {
             CustomerDetailState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                CircularProgressIndicator()
+                ExpressiveLoadingIndicator()
                 Text("Loading statement…", Modifier.padding(top = 12.dp))
             }
             CustomerDetailState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
@@ -142,7 +142,14 @@ import kotlinx.coroutines.launch
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Repayment recorded", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "${formatNaira(success.amount)} applied to sale ${saleShortReference(success.saleId)}. The balances below are current.",
+                        buildString {
+                            append("${formatNaira(success.amount)} applied to sale ${saleShortReference(success.saleId)}.")
+                            if (state.statementRefreshWarning == null) {
+                                append(" The balances below are current.")
+                            } else {
+                                append(" ${state.statementRefreshWarning}")
+                            }
+                        },
                         style = MaterialTheme.typography.bodySmall,
                     )
                     TextButton(onClick = { viewModel.dismissSuccess() }) { Text("Dismiss") }
@@ -400,7 +407,7 @@ import kotlinx.coroutines.launch
                     enabled = !submitting && selected != null && amount.isNotBlank() && (amount.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO,
                     modifier = Modifier.weight(1f),
                 ) {
-                    if (submitting) CircularProgressIndicator(Modifier.height(18.dp)) else Text("Save repayment")
+                    if (submitting) ExpressiveLoadingIndicator(Modifier.height(18.dp)) else Text("Save repayment")
                 }
             }
         }

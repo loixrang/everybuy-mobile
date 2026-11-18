@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.io.IOException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -84,6 +85,26 @@ class SalesRepositoryTest {
         assertEquals("0", body["amountPaid"]?.jsonPrimitive?.content)
     }
 
+    @Test fun `create replays the same idempotent request after a transport failure`() = runTest {
+        val api = FakeSalesApi().apply { failNextCreate = true }
+        val repository = SalesRepository(api)
+        val input = CreateSaleInput(
+            requestId = "stable-request-id",
+            customerId = null,
+            amountPaid = "0",
+            method = "cash",
+            reference = null,
+            items = listOf(SaleLineInput(productId = "p1", unit = "Pack", quantity = 1)),
+        )
+
+        val result = repository.create(input)
+
+        assertEquals("s1", result.sale.id)
+        assertEquals(2, api.createBodies.size)
+        assertEquals(api.createBodies[0], api.createBodies[1])
+        assertEquals("stable-request-id", api.createBodies[1]["requestId"]?.jsonPrimitive?.content)
+    }
+
     @Test fun `list forwards filters to the query parameters`() = runTest {
         val api = FakeSalesApi()
         val repository = SalesRepository(api)
@@ -99,6 +120,8 @@ class SalesRepositoryTest {
 
     private class FakeSalesApi : SalesApi {
         var createBody: JsonObject? = null
+        val createBodies = mutableListOf<JsonObject>()
+        var failNextCreate = false
         var lastPage: Int? = null
         var lastFrom: String? = null
         var lastTo: String? = null
@@ -120,6 +143,11 @@ class SalesRepositoryTest {
 
         override suspend fun create(body: JsonObject): CreateSaleResultDto {
             createBody = body
+            createBodies += body
+            if (failNextCreate) {
+                failNextCreate = false
+                throw IOException("temporary response failure")
+            }
             return CreateSaleResultDto(sale = SaleDto(id = "s1"))
         }
     }

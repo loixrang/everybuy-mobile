@@ -65,6 +65,12 @@ data class StockAdjustmentMutation(
     suspend fun movement(id: String): StockMovementDto = api.movement(id)
     suspend fun suppliers(): List<SupplierDto> = suppliersApi.suppliers().filter { it.active }
     suspend fun products(): List<ProductDto> = productsRepository.load().products
-    suspend fun receive(input: StockAdditionMutation): StockMutationResultDto = api.addStock(input.toJson())
-    suspend fun adjust(input: StockAdjustmentMutation): StockMutationResultDto = api.adjustStock(input.toJson())
+    suspend fun receive(input: StockAdditionMutation): StockMutationResultDto {
+        val body = input.toJson()
+        return withIdempotentReplay { api.addStock(body) }
+    }
+    suspend fun adjust(input: StockAdjustmentMutation): StockMutationResultDto {
+        val body = input.toJson()
+        return withIdempotentReplay { api.adjustStock(body) }
+    }
 }

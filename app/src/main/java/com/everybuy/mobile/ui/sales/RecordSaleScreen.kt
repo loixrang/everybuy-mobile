@@ -21,7 +21,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -77,7 +77,7 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
     }) { insets ->
         when (val current = state) {
             RecordSaleState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                CircularProgressIndicator()
+                ExpressiveLoadingIndicator()
                 Text("Loading products and customers…", Modifier.padding(top = 12.dp))
             }
             RecordSaleState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
@@ -272,7 +272,7 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
             }
         }
         Button(onClick = { viewModel.submit() }, modifier = Modifier.fillMaxWidth(), enabled = !state.submitting && state.lines.isNotEmpty()) {
-            if (state.submitting) CircularProgressIndicator(Modifier.height(18.dp)) else Text("Record sale")
+            if (state.submitting) ExpressiveLoadingIndicator(Modifier.height(18.dp)) else Text("Record sale")
         }
         TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Cancel") }
     }

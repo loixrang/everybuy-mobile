@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -89,7 +89,7 @@ import com.everybuy.mobile.data.StaffMemberDto
     }) { insets ->
         when (val current = state) {
             TeamState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                CircularProgressIndicator()
+                ExpressiveLoadingIndicator()
                 Text("Loading team…", Modifier.padding(top = 12.dp))
             }
             TeamState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
@@ -330,7 +330,7 @@ import com.everybuy.mobile.data.StaffMemberDto
         },
         confirmButton = {
             Button(onClick = { onConfirm(name, email) }, enabled = !inviting && name.isNotBlank() && email.isNotBlank()) {
-                if (inviting) CircularProgressIndicator(Modifier.padding(2.dp)) else Text("Send invite")
+                if (inviting) ExpressiveLoadingIndicator(Modifier.padding(2.dp)) else Text("Send invite")
             }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !inviting) { Text("Cancel") } },

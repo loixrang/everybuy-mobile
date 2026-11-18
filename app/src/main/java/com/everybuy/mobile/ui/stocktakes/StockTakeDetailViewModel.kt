@@ -70,8 +70,29 @@ sealed interface StockTakeDetailState {
         }
         _state.value = current.copy(countSaving = true, countError = null)
         try {
-            repository.recordCount(current.detail.id, itemId, countedPacks)
-            refreshSilently()
+            val result = repository.recordCount(current.detail.id, itemId, countedPacks)
+            val items = current.detail.items.map { existing ->
+                if (existing.id == itemId) {
+                    existing.copy(
+                        expectedPacks = result.expectedPacks,
+                        stockAtCountPacks = result.stockAtCountPacks,
+                        countedPacks = result.countedPacks,
+                        countedBy = result.countedBy,
+                        countedAt = result.countedAt,
+                    )
+                } else {
+                    existing
+                }
+            }
+            _state.value = current.copy(
+                detail = current.detail.copy(
+                    items = items,
+                    countedProducts = items.count { it.countedPacks != null },
+                ),
+                countingItemId = null,
+                countSaving = false,
+                countError = null,
+            )
         } catch (e: CancellationException) { throw e }
         catch (e: retrofit2.HttpException) {
             if (e.code() == 401) { _state.value = StockTakeDetailState.SessionExpired; return@launch }
@@ -97,8 +118,20 @@ sealed interface StockTakeDetailState {
         if (current.detail.id != stockTakeId) return@launch
         _state.value = current.copy(actionBusy = true, actionError = null)
         try {
-            if (finalize) repository.finalize(current.detail.id) else repository.cancel(current.detail.id)
-            refreshSilently()
+            val result = if (finalize) repository.finalize(current.detail.id) else repository.cancel(current.detail.id)
+            _state.value = current.copy(
+                detail = current.detail.copy(
+                    name = result.name,
+                    status = result.status,
+                    reference = result.reference,
+                    createdBy = result.createdBy,
+                    finalizedBy = result.finalizedBy,
+                    createdAt = result.createdAt,
+                    finalizedAt = result.finalizedAt,
+                ),
+                actionBusy = false,
+                actionError = null,
+            )
         } catch (e: CancellationException) { throw e }
         catch (e: retrofit2.HttpException) {
             if (e.code() == 401) { _state.value = StockTakeDetailState.SessionExpired; return@launch }
@@ -124,9 +157,4 @@ sealed interface StockTakeDetailState {
         if (current.actionError != null) _state.value = current.copy(actionError = null)
     }
 
-    private suspend fun refreshSilently() {
-        val current = _state.value as? StockTakeDetailState.Ready
-        val detail = repository.detail(stockTakeId)
-        _state.value = StockTakeDetailState.Ready(detail, actionError = current?.actionError)
-    }
 }

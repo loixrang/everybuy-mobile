@@ -14,7 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -64,7 +64,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
             )
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp)) }
             Button(onClick = { viewModel.submit() }, modifier = Modifier.fillMaxWidth().padding(top = 16.dp), enabled = !state.sending && state.email.isNotBlank()) {
-                if (state.sending) CircularProgressIndicator(Modifier.height(20.dp)) else Text("Send reset link")
+                if (state.sending) ExpressiveLoadingIndicator(Modifier.height(20.dp)) else Text("Send reset link")
             }
         }
         TextButton(onClick = onBack, modifier = Modifier.padding(top = 8.dp)) { Text("Back to sign in") }
@@ -138,7 +138,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
         )
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp)) }
         Button(onClick = { token?.let(viewModel::submit) }, modifier = Modifier.fillMaxWidth().padding(top = 16.dp), enabled = !state.saving && state.password.isNotBlank() && state.confirmation.isNotBlank()) {
-            if (state.saving) CircularProgressIndicator(Modifier.height(20.dp)) else Text("Update password")
+            if (state.saving) ExpressiveLoadingIndicator(Modifier.height(20.dp)) else Text("Update password")
         }
         TextButton(onClick = onBackToSignIn, modifier = Modifier.padding(top = 8.dp)) { Text("Back to sign in") }
     }
@@ -161,7 +161,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
         }
         when (val current = state) {
             InviteAcceptState.Loading -> {
-                CircularProgressIndicator()
+                ExpressiveLoadingIndicator()
                 Text("Checking your invitation…", Modifier.padding(top = 12.dp))
             }
             is InviteAcceptState.Invalid -> {
@@ -217,7 +217,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
                     modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                     enabled = !current.accepting && current.password.isNotBlank() && current.confirmation.isNotBlank(),
                 ) {
-                    if (current.accepting) CircularProgressIndicator(Modifier.height(20.dp)) else Text("Create account")
+                    if (current.accepting) ExpressiveLoadingIndicator(Modifier.height(20.dp)) else Text("Create account")
                 }
                 TextButton(onClick = onDone, modifier = Modifier.padding(top = 4.dp)) { Text("Back to sign in") }
             }

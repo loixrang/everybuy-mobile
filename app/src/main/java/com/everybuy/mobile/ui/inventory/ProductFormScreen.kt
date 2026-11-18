@@ -16,7 +16,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,7 +52,7 @@ private val packNames = listOf("Small Pack", "Twin Pack", "Jumbo Pack", "Wipes",
     }
     Scaffold(topBar = { TopAppBar(title = { Text(if (id == null) "Add product" else "Edit product") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back") } }) }) { insets ->
         when (val current = state) {
-            ProductFormState.Loading -> Column(Modifier.fillMaxSize().padding(insets), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) { CircularProgressIndicator(); Text("Loading product setup…", Modifier.padding(top = 12.dp)) }
+            ProductFormState.Loading -> Column(Modifier.fillMaxSize().padding(insets), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) { ExpressiveLoadingIndicator(); Text("Loading product setup…", Modifier.padding(top = 12.dp)) }
             is ProductFormState.Failed -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(current.message, color = MaterialTheme.colorScheme.error)
                 TextButton(onClick = { viewModel.load(id) }) { Text("Retry") }
@@ -99,7 +99,7 @@ private val packNames = listOf("Small Pack", "Twin Pack", "Jumbo Pack", "Wipes",
         }
         Spacer(Modifier.height(8.dp))
         Button(onClick = { viewModel.save(id) }, modifier = Modifier.fillMaxWidth(), enabled = !state.saving && state.categories.isNotEmpty() && state.brands.isNotEmpty()) {
-            if (state.saving) CircularProgressIndicator(Modifier.height(18.dp)) else Text(if (state.editing) "Save changes" else "Create product")
+            if (state.saving) ExpressiveLoadingIndicator(Modifier.height(18.dp)) else Text(if (state.editing) "Save changes" else "Create product")
         }
         if (state.categories.isEmpty() || state.brands.isEmpty()) Text("An active brand and category are required. Check the catalog and retry.", color = MaterialTheme.colorScheme.error)
         TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Cancel") }

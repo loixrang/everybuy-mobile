@@ -23,7 +23,7 @@ sealed interface ReceiveStockState {
         val products: List<ProductDto>, val suppliers: List<SupplierDto>, val suppliersWarning: String?, val draft: ReceiveStockDraft,
         val errors: Map<String, String> = emptyMap(), val error: String? = null, val saving: Boolean = false,
     ) : ReceiveStockState
-    data class Success(val productName: String, val totalPacks: Int, val newStockPacks: Int, val replayed: Boolean) : ReceiveStockState
+    data class Success(val productName: String, val totalPacks: Int, val newStockPacks: Int?, val replayed: Boolean) : ReceiveStockState
     data object SessionExpired : ReceiveStockState
     data class Failed(val message: String) : ReceiveStockState
 }
@@ -73,8 +73,8 @@ sealed interface ReceiveStockState {
         _state.value = current.copy(saving = true, errors = emptyMap(), error = null)
         try {
             val result = repository.receive(StockAdditionMutation(requestId, product.id, quantity.totalPacks, cost, current.draft.supplierId))
-            val updated = result.updateProduct.firstOrNull { it.id == product.id } ?: throw IllegalStateException("The server did not return the updated stock balance.")
-            _state.value = ReceiveStockState.Success(product.name, quantity.totalPacks, updated.stockPacks, result.replayed)
+            val newStockPacks = result.updateProduct.firstOrNull { it.id == product.id }?.stockPacks
+            _state.value = ReceiveStockState.Success(product.name, quantity.totalPacks, newStockPacks, result.replayed)
         } catch (e: CancellationException) { throw e }
         catch (e: retrofit2.HttpException) {
             val message = when (e.code()) {

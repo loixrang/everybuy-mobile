@@ -23,6 +23,7 @@ sealed interface CustomerDetailState {
         val submitting: Boolean = false,
         val repaymentError: String? = null,
         val success: RepaymentSuccess? = null,
+        val statementRefreshWarning: String? = null,
     ) : CustomerDetailState
     data object NotFound : CustomerDetailState
     data object SessionExpired : CustomerDetailState
@@ -72,12 +73,24 @@ sealed interface CustomerDetailState {
         _state.value = current.copy(submitting = true, repaymentError = null)
         try {
             repository.repay(customerId, RepaymentInput(requestId = stableRequestId, saleId = saleId, amount = value))
-            val statement = repository.statement(customerId)
             payloadKey = null
             requestId = null
+            val success = RepaymentSuccess(amount = value, saleId = saleId)
+            val statement = try {
+                repository.statement(customerId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.value = current.copy(
+                    submitting = false,
+                    success = success,
+                    statementRefreshWarning = "The repayment was recorded, but the statement could not refresh. Reopen this customer to see current balances.",
+                )
+                return@launch
+            }
             _state.value = CustomerDetailState.Ready(
                 statement = statement,
-                success = RepaymentSuccess(amount = value, saleId = saleId),
+                success = success,
             )
         } catch (e: CancellationException) { throw e }
         catch (e: retrofit2.HttpException) {

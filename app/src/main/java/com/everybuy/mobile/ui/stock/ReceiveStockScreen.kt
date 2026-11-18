@@ -17,7 +17,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,7 +53,7 @@ import java.math.BigDecimal
     LaunchedEffect(state) { if (state is ReceiveStockState.SessionExpired) onSessionExpired() }
     Scaffold(topBar = { TopAppBar(title = { Text("Receive stock") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back") } }) }) { insets ->
         when (val current = state) {
-            ReceiveStockState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { CircularProgressIndicator(); Text("Loading products…", Modifier.padding(top = 12.dp)) }
+            ReceiveStockState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { ExpressiveLoadingIndicator(); Text("Loading products…", Modifier.padding(top = 12.dp)) }
             ReceiveStockState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
             is ReceiveStockState.Failed -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 Text(current.message, color = MaterialTheme.colorScheme.error)
@@ -119,7 +119,7 @@ import java.math.BigDecimal
         if (costPreview != null && totalPacks > 0) Text("Receipt cost: ${formatNaira(costPreview)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         state.errors["unitCost"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Button(onClick = { viewModel.submit() }, modifier = Modifier.fillMaxWidth(), enabled = !state.saving && product != null) {
-            if (state.saving) CircularProgressIndicator(Modifier.height(18.dp)) else Text("Save receipt")
+            if (state.saving) ExpressiveLoadingIndicator(Modifier.height(18.dp)) else Text("Save receipt")
         }
     }
     }
@@ -144,7 +144,11 @@ import java.math.BigDecimal
                 Text("Stock received", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 Text(state.productName, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
                 Text("+${state.totalPacks} packs", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
-                Text("New balance: ${state.newStockPacks} packs", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 4.dp))
+                if (state.newStockPacks != null) {
+                    Text("New balance: ${state.newStockPacks} packs", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 4.dp))
+                } else {
+                    Text("The receipt is recorded. The updated balance is unavailable.", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 4.dp))
+                }
                 if (state.replayed) Text("The server confirmed this receipt from your previous retry.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 10.dp))
             }
         }

@@ -17,7 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
@@ -286,7 +286,7 @@ fun StockMovementsScreen(
                                             enabled = !current.loadingMore,
                                         ) {
                                             if (current.loadingMore) {
-                                                CircularProgressIndicator(Modifier.height(16.dp))
+                                                ExpressiveLoadingIndicator(Modifier.height(16.dp))
                                             } else {
                                                 Text(stringResource(R.string.history_load_more))
                                             }
@@ -425,7 +425,7 @@ private fun StockAdjustmentSheet(
                     modifier = Modifier.weight(1f),
                 ) {
                     if (state is StockAdjustmentState.Saving) {
-                        CircularProgressIndicator(Modifier.height(18.dp))
+                        ExpressiveLoadingIndicator(Modifier.height(18.dp))
                     } else {
                         Text(stringResource(R.string.history_adjust_save))
                     }

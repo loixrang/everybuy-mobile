@@ -307,6 +307,12 @@ fun LoadingPane(message: String, modifier: Modifier = Modifier) {
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun ExpressiveLoadingIndicator(modifier: Modifier = Modifier) {
+    LoadingIndicator(modifier = modifier)
+}
+
 @Composable
 fun ErrorPane(
     message: String,

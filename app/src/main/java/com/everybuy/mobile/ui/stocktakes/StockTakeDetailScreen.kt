@@ -22,7 +22,7 @@ import com.everybuy.mobile.ui.components.GlassAlertDialog as AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -71,7 +71,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
     }) { insets ->
         when (val current = state) {
             StockTakeDetailState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                CircularProgressIndicator()
+                ExpressiveLoadingIndicator()
                 Text("Loading stocktake…", Modifier.padding(top = 12.dp))
             }
             StockTakeDetailState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
@@ -116,7 +116,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
                         pendingAction = null
                     },
                 ) {
-                    if (ready?.actionBusy == true) CircularProgressIndicator(Modifier.height(18.dp)) else Text(if (finalize) "Approve stocktake" else "Cancel stocktake")
+                    if (ready?.actionBusy == true) ExpressiveLoadingIndicator(Modifier.height(18.dp)) else Text(if (finalize) "Approve stocktake" else "Cancel stocktake")
                 }
             },
             dismissButton = { TextButton(onClick = { pendingAction = null }, enabled = ready?.actionBusy != true) { Text("Keep stocktake") } },
@@ -235,7 +235,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
                             onClick = onFinalize,
                             enabled = !state.actionBusy && allCounted && unvaluedIncreases.isEmpty(),
                             modifier = Modifier.weight(1f),
-                        ) { if (state.actionBusy) CircularProgressIndicator(Modifier.height(18.dp)) else Text("Approve stocktake") }
+                        ) { if (state.actionBusy) ExpressiveLoadingIndicator(Modifier.height(18.dp)) else Text("Approve stocktake") }
                     }
                     if (!allCounted) Text("Every product must be counted before approval.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (unvaluedIncreases.isNotEmpty()) Text("Record the known acquisition cost for each stock increase before approval.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -350,7 +350,7 @@ import com.everybuy.mobile.data.StockTakeItemDto
                     val message = validateStockTakeCount(bags, loose, item.packsPerBag).message
                     if (message != null) localError = message else { localError = null; onSave(bags, loose) }
                 },
-            ) { if (saving) CircularProgressIndicator(Modifier.height(18.dp)) else Text(if (item.countedPacks == null) "Save count" else "Update count") }
+            ) { if (saving) ExpressiveLoadingIndicator(Modifier.height(18.dp)) else Text(if (item.countedPacks == null) "Save count" else "Update count") }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !saving) { Text("Cancel") } },
     )

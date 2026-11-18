@@ -85,7 +85,7 @@ sealed interface ExpensesState {
         val stableRequestId = requestId ?: UUID.randomUUID().toString().also { requestId = it; payloadKey = key }
         _state.value = current.copy(submitting = true, formError = null)
         try {
-            repository.create(
+            val created = repository.create(
                 CreateExpenseInput(
                     requestId = stableRequestId,
                     title = cleanTitle,
@@ -96,11 +96,14 @@ sealed interface ExpensesState {
             )
             payloadKey = null
             requestId = null
-            val expenses = repository.list()
-            val ready = ExpensesState.Ready(
-                expenses = expenses,
+            val expenses = listOf(created) + current.expenses.filterNot { it.id == created.id }
+            val ready = current.copy(
                 query = current.query,
+                expenses = expenses,
+                searchResults = if (current.query.isBlank()) expenses else current.searchResults,
                 searching = current.query.isNotBlank(),
+                submitting = false,
+                formError = null,
                 successMessage = "${formatNaira(cleanAmount)} recorded for $cleanTitle.",
             )
             _state.value = ready

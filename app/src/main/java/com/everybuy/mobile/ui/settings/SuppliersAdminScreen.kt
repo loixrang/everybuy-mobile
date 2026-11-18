@@ -20,7 +20,7 @@ import com.everybuy.mobile.ui.components.GlassAlertDialog as AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -76,7 +76,7 @@ import com.everybuy.mobile.data.SupplierDto
     }) { insets ->
         when (val current = state) {
             SuppliersAdminState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                CircularProgressIndicator()
+                ExpressiveLoadingIndicator()
                 Text("Loading suppliers…", Modifier.padding(top = 12.dp))
             }
             SuppliersAdminState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
@@ -184,7 +184,7 @@ import com.everybuy.mobile.data.SupplierDto
         },
         confirmButton = {
             Button(onClick = { onConfirm(name, phone) }, enabled = !saving && name.isNotBlank()) {
-                if (saving) CircularProgressIndicator(Modifier.padding(2.dp)) else Text(if (supplier == null) "Add supplier" else "Save supplier")
+                if (saving) ExpressiveLoadingIndicator(Modifier.padding(2.dp)) else Text(if (supplier == null) "Add supplier" else "Save supplier")
             }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !saving) { Text("Cancel") } },

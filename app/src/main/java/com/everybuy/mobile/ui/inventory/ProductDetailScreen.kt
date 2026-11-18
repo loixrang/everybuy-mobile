@@ -18,7 +18,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.everybuy.mobile.ui.components.ExpressiveLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,7 +48,7 @@ import com.everybuy.mobile.data.StockMovementDto
     LaunchedEffect(state) { if (state is ProductDetailState.SessionExpired) onSessionExpired() }
     Scaffold(topBar = { TopAppBar(title = { Text("Product details") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back") } }, actions = { if (isOwner) TextButton(onClick = onEdit) { Text("Edit") } }) }) { insets ->
         when (val current = state) {
-            ProductDetailState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { CircularProgressIndicator(); Text("Loading product…", Modifier.padding(top = 12.dp)) }
+            ProductDetailState.Loading -> Column(Modifier.fillMaxSize().padding(insets), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { ExpressiveLoadingIndicator(); Text("Loading product…", Modifier.padding(top = 12.dp)) }
             ProductDetailState.NotFound -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) { Text("Product not found", style = MaterialTheme.typography.titleLarge); TextButton(onClick = onBack) { Text("Back to inventory") } }
             ProductDetailState.SessionExpired -> Text("Your session has expired.", Modifier.padding(insets).padding(24.dp))
             is ProductDetailState.Failed -> Column(Modifier.fillMaxSize().padding(insets).padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
