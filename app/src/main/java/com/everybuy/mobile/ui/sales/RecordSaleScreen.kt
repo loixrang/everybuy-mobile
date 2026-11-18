@@ -123,10 +123,6 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
     val amountPaid = state.amountPaid.trim().ifBlank { "0" }.toBigDecimalOrNull() ?: BigDecimal.ZERO
     val balance = (total - amountPaid).max(BigDecimal.ZERO)
     val nothingPaid = amountPaid.compareTo(BigDecimal.ZERO) == 0
-    val searchResults = remember(state.products, state.search) {
-        val query = state.search.trim()
-        if (query.isBlank()) emptyList() else state.products.filter { it.active && it.stockPacks > 0 && "${it.name} ${it.size.orEmpty()}".contains(query, ignoreCase = true) }.take(8)
-    }
     val selectedCustomer = state.customers.firstOrNull { it.id == state.customerId }
 
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
@@ -143,10 +139,10 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
 
         OutlinedTextField(state.search, viewModel::updateSearch, Modifier.fillMaxWidth(), label = { Text("Search products to add") }, singleLine = true)
-        if (searchResults.isNotEmpty()) {
+        if (state.search.isNotBlank() && state.searchResults.isNotEmpty()) {
             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column {
-                    searchResults.forEach { product ->
+                    state.searchResults.forEach { product ->
                         DropdownMenuItem(
                             text = { Column { Text(product.name, fontWeight = FontWeight.Medium); Text("${product.packName} · ${product.stockPacks} packs available", style = MaterialTheme.typography.bodySmall) } },
                             onClick = { viewModel.addProduct(product.id) },
@@ -154,7 +150,7 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
                     }
                 }
             }
-        } else if (state.search.isNotBlank()) {
+        } else if (state.search.isNotBlank() && !state.searching) {
             Text("No active product with stock matches that search.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 

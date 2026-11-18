@@ -2,6 +2,7 @@ package com.everybuy.mobile.ui.audit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.everybuy.mobile.core.search.DebouncedFuzzySearch
 import com.everybuy.mobile.core.util.formatNaira
 import com.everybuy.mobile.data.AuditEntryDto
 import com.everybuy.mobile.data.AuditRepository
@@ -15,15 +16,13 @@ import javax.inject.Inject
 
 sealed interface AuditState {
     data object Loading : AuditState
-    data class Ready(val entries: List<AuditEntryDto>, val query: String = "") : AuditState {
-        val filtered: List<AuditEntryDto>
-            get() {
-                val search = query.trim()
-                if (search.isEmpty()) return entries
-                return entries.filter { entry ->
-                    "${entry.actor} ${entry.action} ${entry.entity} ${entry.entityId}".contains(search, ignoreCase = true)
-                }
-            }
+    data class Ready(
+        val entries: List<AuditEntryDto>,
+        val query: String = "",
+        val searchResults: List<AuditEntryDto> = entries,
+        val searching: Boolean = false,
+    ) : AuditState {
+        val filtered: List<AuditEntryDto> get() = searchResults
     }
     data object SessionExpired : AuditState
     data class Failed(val message: String) : AuditState
@@ -45,10 +44,12 @@ fun auditDetailSummary(entry: AuditEntryDto): String {
 @HiltViewModel class AuditViewModel @Inject constructor(private val repository: AuditRepository) : ViewModel() {
     private val _state = MutableStateFlow<AuditState>(AuditState.Loading)
     val state = _state.asStateFlow()
+    private val fuzzySearch = DebouncedFuzzySearch<AuditEntryDto>(viewModelScope)
 
     init { refresh() }
 
     fun refresh() = viewModelScope.launch {
+        fuzzySearch.cancel()
         _state.value = AuditState.Loading
         try {
             _state.value = AuditState.Ready(repository.list())
@@ -66,6 +67,25 @@ fun auditDetailSummary(entry: AuditEntryDto): String {
 
     fun setQuery(value: String) {
         val current = _state.value as? AuditState.Ready ?: return
-        _state.value = current.copy(query = value)
+        _state.value = current.copy(query = value, searching = value.isNotBlank())
+        fuzzySearch.search(
+            items = current.entries,
+            query = value,
+            searchableText = { entry ->
+                listOf(
+                    entry.actor,
+                    entry.action,
+                    entry.entity,
+                    entry.entityId,
+                    entry.at,
+                    entry.detail?.entries?.joinToString(" ") { (key, detailValue) -> "$key $detailValue" }.orEmpty(),
+                ).joinToString(" ")
+            },
+        ) { results ->
+            val latest = _state.value as? AuditState.Ready ?: return@search
+            if (latest.entries === current.entries && latest.query == value) {
+                _state.value = latest.copy(searchResults = results, searching = false)
+            }
+        }
     }
 }

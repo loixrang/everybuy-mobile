@@ -2,6 +2,7 @@ package com.everybuy.mobile.ui.customers
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.everybuy.mobile.core.search.DebouncedFuzzySearch
 import com.everybuy.mobile.data.CustomerListItemDto
 import com.everybuy.mobile.data.CustomersRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,22 +19,21 @@ sealed interface CustomersState {
         val customers: List<CustomerListItemDto>,
         val query: String = "",
         val status: String = STATUS_ALL,
+        val searchResults: List<CustomerListItemDto> = customers,
+        val searching: Boolean = false,
     ) : CustomersState {
         val filtered: List<CustomerListItemDto>
             get() {
-                val search = query.trim()
-                return customers
-                    .filter { customer ->
-                        when (status) {
-                            STATUS_ACTIVE -> customer.active
-                            STATUS_INACTIVE -> !customer.active
-                            else -> true
-                        }
+                val matching = searchResults.filter { customer ->
+                    when (status) {
+                        STATUS_ACTIVE -> customer.active
+                        STATUS_INACTIVE -> !customer.active
+                        else -> true
                     }
-                    .filter { customer ->
-                        search.isEmpty() || "${customer.name} ${customer.phone.orEmpty()}".contains(search, ignoreCase = true)
-                    }
-                    .sortedWith(compareByDescending<CustomerListItemDto> { it.active }.thenBy { it.name.lowercase() })
+                }
+                return if (query.isBlank()) {
+                    matching.sortedWith(compareByDescending<CustomerListItemDto> { it.active }.thenBy { it.name.lowercase() })
+                } else matching
             }
 
         val activeCount: Int get() = customers.count { it.active }
@@ -54,10 +54,12 @@ const val STATUS_INACTIVE = "INACTIVE"
 @HiltViewModel class CustomersViewModel @Inject constructor(private val repository: CustomersRepository) : ViewModel() {
     private val _state = MutableStateFlow<CustomersState>(CustomersState.Loading)
     val state = _state.asStateFlow()
+    private val fuzzySearch = DebouncedFuzzySearch<CustomerListItemDto>(viewModelScope)
 
     init { refresh() }
 
     fun refresh() = viewModelScope.launch {
+        fuzzySearch.cancel()
         _state.value = CustomersState.Loading
         try {
             _state.value = CustomersState.Ready(repository.list())
@@ -73,11 +75,38 @@ const val STATUS_INACTIVE = "INACTIVE"
         catch (_: Exception) { _state.value = CustomersState.Failed("Customers could not be loaded. Try again.") }
     }
 
-    fun setQuery(value: String) = updateReady { it.copy(query = value) }
+    fun setQuery(value: String) {
+        val current = _state.value as? CustomersState.Ready ?: return
+        _state.value = current.copy(query = value, searching = value.isNotBlank())
+        fuzzySearch.search(
+            items = current.customers,
+            query = value,
+            searchableText = { customer ->
+                listOf(
+                    customer.id,
+                    customer.name,
+                    customer.phone.orEmpty(),
+                    customer.address.orEmpty(),
+                    customer.notes.orEmpty(),
+                    customer.balance,
+                    customer.totalPurchases,
+                    customer.lastSaleAt.orEmpty(),
+                ).joinToString(" ")
+            },
+        ) { results ->
+            val latest = _state.value as? CustomersState.Ready ?: return@search
+            if (latest.customers === current.customers && latest.query == value) {
+                _state.value = latest.copy(searchResults = results, searching = false)
+            }
+        }
+    }
 
     fun setStatus(value: String) = updateReady { it.copy(status = value) }
 
-    fun clearFilters() = updateReady { it.copy(query = "", status = STATUS_ALL) }
+    fun clearFilters() {
+        setQuery("")
+        setStatus(STATUS_ALL)
+    }
 
     private fun updateReady(transform: (CustomersState.Ready) -> CustomersState.Ready) {
         val current = _state.value as? CustomersState.Ready ?: return

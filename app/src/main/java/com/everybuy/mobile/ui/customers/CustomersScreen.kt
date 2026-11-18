@@ -101,6 +101,7 @@ fun CustomersScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun CustomersContent(
     state: CustomersState.Ready,
@@ -158,7 +159,9 @@ private fun CustomersContent(
             )
         }
         if (filtered.isEmpty()) {
-            item {
+            if (state.searching) {
+                item { androidx.compose.material3.LoadingIndicator(Modifier.fillMaxWidth().padding(16.dp)) }
+            } else item {
                 EmptyPane(
                     title = if (state.customers.isEmpty()) {
                         stringResource(R.string.customers_empty)

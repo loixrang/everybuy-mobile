@@ -130,11 +130,9 @@ fun StockMovementsScreen(
             )
             is StockMovementsState.Ready -> {
                 val products = current.products.associateBy { it.id }
-                val filtered = current.movements.filter { movement ->
+                val filtered = current.searchResults.filter { movement ->
                     (type == "ALL" || movement.type == type) &&
-                        (productFilter == "ALL" || movement.productId == productFilter) &&
-                        "${products[movement.productId]?.name.orEmpty()} ${products[movement.productId]?.size.orEmpty()} ${movement.type} ${movement.note.orEmpty()} ${movement.requestId.orEmpty()} ${movement.saleItemId.orEmpty()}"
-                            .contains(query.trim(), ignoreCase = true)
+                        (productFilter == "ALL" || movement.productId == productFilter)
                 }
                 Column(
                     Modifier
@@ -184,7 +182,10 @@ fun StockMovementsScreen(
                     }
                     ExpressiveSearchField(
                         value = query,
-                        onValueChange = { query = it },
+                        onValueChange = {
+                            query = it
+                            viewModel.setQuery(it)
+                        },
                         placeholder = stringResource(R.string.history_search),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
@@ -247,14 +248,18 @@ fun StockMovementsScreen(
                         )
                     }
                     if (filtered.isEmpty()) {
-                        EmptyPane(
-                            title = if (query.isBlank() && type == "ALL" && productFilter == "ALL") {
-                                stringResource(R.string.history_empty)
-                            } else {
-                                stringResource(R.string.history_no_matches)
-                            },
-                            body = stringResource(R.string.history_search),
-                        )
+                        if (current.searching) {
+                            androidx.compose.material3.LoadingIndicator(Modifier.fillMaxWidth().padding(16.dp))
+                        } else {
+                            EmptyPane(
+                                title = if (query.isBlank() && type == "ALL" && productFilter == "ALL") {
+                                    stringResource(R.string.history_empty)
+                                } else {
+                                    stringResource(R.string.history_no_matches)
+                                },
+                                body = stringResource(R.string.history_search),
+                            )
+                        }
                     } else {
                         LazyColumn(
                             modifier = Modifier.weight(1f),

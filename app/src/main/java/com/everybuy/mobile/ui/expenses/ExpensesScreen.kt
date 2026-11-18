@@ -135,6 +135,7 @@ fun ExpensesScreen(
     LaunchedEffect(success) { if (success != null) showForm = false }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ExpensesContent(
     state: ExpensesState.Ready,
@@ -214,7 +215,9 @@ private fun ExpensesContent(
             )
         }
         if (filtered.isEmpty()) {
-            item {
+            if (state.searching) {
+                item { androidx.compose.material3.LoadingIndicator(Modifier.fillMaxWidth().padding(16.dp)) }
+            } else item {
                 EmptyPane(
                     title = if (state.expenses.isEmpty()) {
                         stringResource(R.string.expenses_empty)

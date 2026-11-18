@@ -126,7 +126,10 @@ fun SalesScreen(
                     item {
                         ExpressiveSearchField(
                             value = query,
-                            onValueChange = { query = it },
+                            onValueChange = {
+                                query = it
+                                viewModel.setQuery(it)
+                            },
                             placeholder = stringResource(R.string.sales_search),
                         )
                     }
@@ -210,7 +213,13 @@ fun SalesScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    if (current.rows.isEmpty()) {
+                    if (current.searchResults.isEmpty() && current.searching) {
+                        item {
+                            androidx.compose.material3.LoadingIndicator(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            )
+                        }
+                    } else if (current.searchResults.isEmpty()) {
                         item {
                             EmptyPane(
                                 title = stringResource(R.string.sales_no_results),
@@ -218,7 +227,7 @@ fun SalesScreen(
                             )
                         }
                     } else {
-                        items(current.rows, key = { it.id }) { row ->
+                        items(current.searchResults, key = { it.id }) { row ->
                             SaleRowCard(row) { onOpenSale(row.id) }
                         }
                         item {

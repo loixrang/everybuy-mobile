@@ -66,7 +66,6 @@ fun InventoryScreen(
 ) {
     val state by viewModel.state.collectAsState()
     LaunchedEffect(state) { if (state is InventoryState.Unauthorized) onSessionExpired() }
-    var search by rememberSaveable { mutableStateOf("") }
     var categoryFilter by rememberSaveable { mutableStateOf("ALL") }
 
     EverybuyScreen(
@@ -103,10 +102,8 @@ fun InventoryScreen(
                 val inventory = current.inventory
                 val categoryNames = inventory.categories.associate { it.id to it.name }
                 val brandNames = inventory.brands.associate { it.id to it.name }
-                val filtered = inventory.products.filter { product ->
-                    (categoryFilter == "ALL" || product.categoryId == categoryFilter) &&
-                        "${product.name} ${product.packName} ${product.size.orEmpty()} ${categoryNames[product.categoryId].orEmpty()} ${brandNames[product.brandId].orEmpty()}"
-                            .contains(search.trim(), ignoreCase = true)
+                val filtered = current.searchResults.filter { product ->
+                    categoryFilter == "ALL" || product.categoryId == categoryFilter
                 }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -120,8 +117,8 @@ fun InventoryScreen(
                 ) {
                     item {
                         ExpressiveSearchField(
-                            value = search,
-                            onValueChange = { search = it },
+                            value = current.query,
+                            onValueChange = viewModel::setQuery,
                             placeholder = stringResource(R.string.inventory_search),
                         )
                     }
@@ -154,15 +151,17 @@ fun InventoryScreen(
                     item {
                         SectionHeader(
                             title = pluralStringResource(R.plurals.inventory_products_count, filtered.size, filtered.size),
-                            supporting = if (search.isBlank() && categoryFilter == "ALL") {
+                            supporting = if (current.query.isBlank() && categoryFilter == "ALL") {
                                 stringResource(R.string.inventory_subtitle)
                             } else null,
                         )
                     }
                     if (filtered.isEmpty()) {
-                        item {
+                        if (current.searching) {
+                            item { androidx.compose.material3.LoadingIndicator(Modifier.fillMaxWidth().padding(16.dp)) }
+                        } else item {
                             EmptyPane(
-                                title = if (search.isBlank()) stringResource(R.string.inventory_empty) else stringResource(R.string.inventory_no_matches),
+                                title = if (current.query.isBlank()) stringResource(R.string.inventory_empty) else stringResource(R.string.inventory_no_matches),
                                 body = stringResource(R.string.inventory_search),
                             )
                         }

@@ -2,6 +2,7 @@ package com.everybuy.mobile.ui.expenses
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.everybuy.mobile.core.search.DebouncedFuzzySearch
 import com.everybuy.mobile.core.util.formatNaira
 import com.everybuy.mobile.core.util.serverMessage
 import com.everybuy.mobile.data.CreateExpenseInput
@@ -20,18 +21,14 @@ sealed interface ExpensesState {
     data class Ready(
         val expenses: List<ExpenseDto>,
         val query: String = "",
+        val searchResults: List<ExpenseDto> = expenses,
+        val searching: Boolean = false,
         val submitting: Boolean = false,
         val formError: String? = null,
         val successMessage: String? = null,
     ) : ExpensesState {
         val filtered: List<ExpenseDto>
-            get() {
-                val search = query.trim()
-                if (search.isEmpty()) return expenses
-                return expenses.filter { expense ->
-                    "${expense.title} ${expense.category} ${expense.notes.orEmpty()}".contains(search, ignoreCase = true)
-                }
-            }
+            get() = searchResults
     }
     data object SessionExpired : ExpensesState
     data class Failed(val message: String) : ExpensesState
@@ -40,12 +37,14 @@ sealed interface ExpensesState {
 @HiltViewModel class ExpensesViewModel @Inject constructor(private val repository: ExpensesRepository) : ViewModel() {
     private val _state = MutableStateFlow<ExpensesState>(ExpensesState.Loading)
     val state = _state.asStateFlow()
+    private val fuzzySearch = DebouncedFuzzySearch<ExpenseDto>(viewModelScope)
     private var payloadKey: String? = null
     private var requestId: String? = null
 
     init { refresh() }
 
     fun refresh() = viewModelScope.launch {
+        fuzzySearch.cancel()
         _state.value = ExpensesState.Loading
         try {
             _state.value = ExpensesState.Ready(repository.list())
@@ -61,7 +60,11 @@ sealed interface ExpensesState {
         catch (_: Exception) { _state.value = ExpensesState.Failed("Expenses could not be loaded. Try again.") }
     }
 
-    fun setQuery(value: String) = updateReady { it.copy(query = value) }
+    fun setQuery(value: String) {
+        val current = _state.value as? ExpensesState.Ready ?: return
+        _state.value = current.copy(query = value, searching = value.isNotBlank())
+        searchExpenses(current.expenses, value)
+    }
 
     fun record(title: String, category: String, amount: String, notes: String) = viewModelScope.launch {
         val current = _state.value as? ExpensesState.Ready ?: return@launch
@@ -94,11 +97,14 @@ sealed interface ExpensesState {
             payloadKey = null
             requestId = null
             val expenses = repository.list()
-            _state.value = ExpensesState.Ready(
+            val ready = ExpensesState.Ready(
                 expenses = expenses,
                 query = current.query,
+                searching = current.query.isNotBlank(),
                 successMessage = "${formatNaira(cleanAmount)} recorded for $cleanTitle.",
             )
+            _state.value = ready
+            searchExpenses(expenses, current.query)
         } catch (e: CancellationException) { throw e }
         catch (e: retrofit2.HttpException) {
             if (e.code() == 401) { _state.value = ExpensesState.SessionExpired; return@launch }
@@ -129,5 +135,30 @@ sealed interface ExpensesState {
     private fun updateReady(transform: (ExpensesState.Ready) -> ExpensesState.Ready) {
         val current = _state.value as? ExpensesState.Ready ?: return
         _state.value = transform(current)
+    }
+
+    private fun searchExpenses(expenses: List<ExpenseDto>, query: String) {
+        fuzzySearch.search(
+            items = expenses,
+            query = query,
+            searchableText = { expense ->
+                listOf(
+                    expense.id,
+                    expense.requestId,
+                    expense.title,
+                    expense.category,
+                    expense.amount,
+                    expense.notes.orEmpty(),
+                    expense.spentAt,
+                    expense.recordedBy,
+                    expense.createdAt,
+                ).joinToString(" ")
+            },
+        ) { results ->
+            val latest = _state.value as? ExpensesState.Ready ?: return@search
+            if (latest.expenses === expenses && latest.query == query) {
+                _state.value = latest.copy(searchResults = results, searching = false)
+            }
+        }
     }
 }

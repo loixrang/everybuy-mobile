@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -75,6 +76,7 @@ fun AuditScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun AuditContent(
     state: AuditState.Ready,
@@ -104,7 +106,9 @@ private fun AuditContent(
             SectionHeader(title = stringResource(R.string.audit_title))
         }
         if (filtered.isEmpty()) {
-            item {
+            if (state.searching) {
+                item { androidx.compose.material3.LoadingIndicator(Modifier.fillMaxWidth().padding(16.dp)) }
+            } else item {
                 EmptyPane(
                     title = if (state.entries.isEmpty()) {
                         stringResource(R.string.audit_empty)
