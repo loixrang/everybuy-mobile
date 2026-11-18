@@ -1,4 +1,296 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Everybuy</string>
+
+    <!-- Splash / auth -->
+    <string name="splash_tagline">Shop stock, sales and customers in one place</string>
+    <string name="splash_connecting">Connecting securely…</string>
+    <string name="splash_brand_mark">Everybuy shopping bag</string>
+    <string name="auth_title">Everybuy</string>
+    <string name="auth_subtitle">Sign in to your business</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_sign_in">Sign in</string>
+    <string name="auth_forgot_password">Forgot password?</string>
+    <string name="auth_verify">Verify</string>
+    <string name="auth_totp_label">Authenticator code</string>
+    <string name="auth_two_step_title">Two-step verification</string>
+    <string name="auth_two_step_body">Enter the code from your authenticator app.</string>
+    <string name="auth_staff_required">Staff access required</string>
+    <string name="auth_staff_body">This account is signed in, but it does not have an active Everybuy staff profile.</string>
+    <string name="auth_retry_session">Retry session</string>
+    <string name="auth_sign_out">Sign out</string>
+
+    <!-- Navigation -->
+    <string name="nav_stock">Stock</string>
+    <string name="nav_sales">Sales</string>
+    <string name="nav_overview">Overview</string>
+    <string name="nav_customers">Customers</string>
+    <string name="nav_more">More</string>
+
+    <!-- Common -->
+    <string name="action_retry">Retry</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_back">Back</string>
+    <string name="action_open_settings">Open settings</string>
+    <string name="action_previous">Previous</string>
+    <string name="action_next">Next</string>
+    <string name="action_apply_filters">Apply filters</string>
+    <string name="action_sign_out">Sign out</string>
+    <string name="search_clear">Clear search</string>
+    <string name="loading">Loading…</string>
+    <string name="session_expired">Your session has expired. Returning to sign in…</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_dismiss">Dismiss</string>
+
+    <!-- Inventory -->
+    <string name="inventory_title">Inventory</string>
+    <string name="inventory_subtitle">Stock on hand and product prices</string>
+    <string name="inventory_search">Search products</string>
+    <string name="inventory_add_product">Add product</string>
+    <string name="inventory_loading">Loading products…</string>
+    <string name="inventory_empty">No active products yet.</string>
+    <string name="inventory_no_matches">No products match your search.</string>
+    <string name="inventory_all_products">All products</string>
+    <string name="inventory_all_categories">All categories</string>
+    <plurals name="inventory_products_count">
+        <item quantity="one">%1$d product</item>
+        <item quantity="other">%1$d products</item>
+    </plurals>
+    <string name="inventory_packs_in_stock">packs in stock</string>
+    <string name="inventory_price_per_bag">%1$s per bag</string>
+    <string name="inventory_low_stock">Low stock</string>
+
+    <!-- Overview -->
+    <string name="overview_title">Overview</string>
+    <string name="overview_today">Today</string>
+    <string name="overview_monthly">Monthly</string>
+    <string name="overview_profit">Profit</string>
+    <string name="overview_record_sale">Record sale</string>
+    <string name="overview_at_a_glance">Today at a glance</string>
+    <string name="overview_sales_today">Sales today</string>
+    <string name="overview_payments_received">Payments received</string>
+    <string name="overview_customer_balances">Customer balances</string>
+    <string name="overview_low_stock_stat">Low stock</string>
+    <string name="overview_low_stock_section">Low stock</string>
+    <string name="overview_recent_sales">Recent sales</string>
+    <string name="overview_no_low_stock">Every product is above the low-stock threshold.</string>
+    <string name="overview_no_sales">No sales recorded today.</string>
+    <string name="overview_loading">Loading today’s overview…</string>
+    <plurals name="overview_sales_count">
+        <item quantity="one">%1$d sale</item>
+        <item quantity="other">%1$d sales</item>
+    </plurals>
+    <string name="overview_balance_detail">Outstanding</string>
+    <string name="overview_low_stock_detail">10 packs or fewer</string>
+    <string name="overview_payments_detail">Includes repayments</string>
+    <string name="overview_monthly_sales">Sales</string>
+    <string name="overview_money_received">Money received</string>
+    <string name="overview_outstanding_debt">Outstanding debt</string>
+    <string name="overview_products_sold">Products sold</string>
+    <string name="overview_product_sales">Product sales</string>
+    <string name="overview_no_product_sales">No products were sold in this month.</string>
+    <string name="overview_closing_stock">Closing stock</string>
+    <string name="overview_no_closing_stock">No products existed at the end of this month.</string>
+    <string name="overview_revenue">Revenue</string>
+    <string name="overview_cogs">Cost of goods</string>
+    <string name="overview_gross_profit">Gross profit</string>
+    <string name="overview_net_profit">Net profit</string>
+    <string name="overview_previous_month">Previous</string>
+    <string name="overview_next_month">Next</string>
+    <string name="overview_this_month">This month</string>
+
+    <!-- Sales -->
+    <string name="sales_title">Sales</string>
+    <string name="sales_search">Search sale number or customer</string>
+    <string name="sales_record_sale">Record sale</string>
+    <string name="sales_loading">Loading sales…</string>
+    <string name="sales_no_results">No sales found</string>
+    <string name="sales_no_results_body">Record a sale or change the filters.</string>
+    <plurals name="sales_count">
+        <item quantity="one">%1$d sale found</item>
+        <item quantity="other">%1$d sales found</item>
+    </plurals>
+    <string name="sales_page">Page %1$d of %2$d</string>
+    <string name="sales_filter_all">All</string>
+    <string name="sales_filter_paid">Paid</string>
+    <string name="sales_filter_part_paid">Part paid</string>
+    <string name="sales_filter_unpaid">Unpaid</string>
+    <string name="sales_summary_sales">Sales</string>
+    <string name="sales_summary_received">Received</string>
+    <string name="sales_summary_outstanding">Outstanding</string>
+    <string name="sales_summary_count">Count</string>
+    <string name="sales_from">From</string>
+    <string name="sales_to">To</string>
+    <string name="sales_date_hint">YYYY-MM-DD</string>
+    <string name="sales_walk_in">Walk-in customer</string>
+    <string name="sales_total">Total %1$s</string>
+    <string name="sales_balance">Balance %1$s</string>
+
+    <!-- Customers -->
+    <string name="customers_title">Customers</string>
+    <string name="customers_search">Search name or phone</string>
+    <string name="customers_add">Add customer</string>
+    <string name="customers_loading">Loading customers…</string>
+    <string name="customers_empty">No customers yet</string>
+    <string name="customers_empty_body">Add a customer to record credit sales and later repayments.</string>
+    <string name="customers_no_matches">No matching customers</string>
+    <string name="customers_no_matches_body">Try a different name or phone number, or clear the status filter.</string>
+    <string name="customers_active">Active</string>
+    <string name="customers_inactive">Inactive</string>
+    <string name="customers_all">All customers</string>
+    <string name="customers_owed">Owed by customers</string>
+    <string name="customers_active_count">%1$d of %2$d</string>
+    <string name="customers_no_phone">No phone number</string>
+    <string name="customers_owes">Owes %1$s</string>
+    <string name="customers_no_balance">No balance</string>
+    <string name="customers_statement">Statement</string>
+    <plurals name="customers_shown">
+        <item quantity="one">%1$d customer shown · Total outstanding %2$s</item>
+        <item quantity="other">%1$d customers shown · Total outstanding %2$s</item>
+    </plurals>
+
+    <!-- History -->
+    <string name="history_title">Stock history</string>
+    <string name="history_subtitle">Every stock movement, newest first</string>
+    <string name="history_search">Search movements</string>
+    <string name="history_loading">Loading stock ledger…</string>
+    <string name="history_adjust_stock">Adjust stock</string>
+    <string name="history_choose_product">Choose product</string>
+    <string name="history_all_products">All products</string>
+    <plurals name="history_count">
+        <item quantity="one">%1$d movement loaded</item>
+        <item quantity="other">%1$d movements loaded</item>
+    </plurals>
+    <string name="history_empty">No stock movements yet.</string>
+    <string name="history_no_matches">No movements match these filters.</string>
+    <string name="history_load_more">Load more</string>
+    <string name="history_filter_all">All</string>
+    <string name="history_filter_opening">Opening stock</string>
+    <string name="history_filter_receipts">Receipts</string>
+    <string name="history_filter_sales">Sales</string>
+    <string name="history_filter_adjustments">Adjustments</string>
+    <string name="history_type_sale">Shop sale</string>
+    <string name="history_type_receipt">Receipt</string>
+    <string name="history_type_opening">Opening stock</string>
+    <string name="history_type_adjustment">Adjustment</string>
+    <string name="history_type_stocktake">Stocktake</string>
+    <string name="history_unknown_product">Unknown product</string>
+    <string name="history_adjust_quantity">Quantity (packs)</string>
+    <string name="history_adjust_reason">Reason</string>
+    <string name="history_adjust_add">Add</string>
+    <string name="history_adjust_remove">Remove</string>
+    <string name="history_adjust_save">Save adjustment</string>
+    <plurals name="history_adjust_projected">
+        <item quantity="one">Projected balance: %1$d pack</item>
+        <item quantity="other">Projected balance: %1$d packs</item>
+    </plurals>
+    <string name="history_adjust_note_support">Saved in movement history · %1$d/%2$d</string>
+    <plurals name="history_product_available">
+        <item quantity="one">%1$s · %2$d pack available</item>
+        <item quantity="other">%1$s · %2$d packs available</item>
+    </plurals>
+
+    <!-- Counts -->
+    <string name="counts_title">Stock counts</string>
+    <string name="counts_subtitle">Count physical stock and review differences</string>
+    <string name="counts_new">Start stocktake</string>
+    <string name="counts_loading">Loading stocktakes…</string>
+    <string name="counts_empty">No stocktakes yet</string>
+    <string name="counts_empty_body">Start a stocktake to record what is physically on the shelf. Every active product is included with its current stock.</string>
+    <plurals name="counts_total">
+        <item quantity="one">Page %1$d of %2$d · %3$d total</item>
+        <item quantity="other">Page %1$d of %2$d · %3$d total</item>
+    </plurals>
+    <string name="counts_started">Started %1$s</string>
+    <string name="counts_start_unavailable">Start date unavailable</string>
+    <string name="counts_dialog_body">Every active product is added with its current stock. Counts do not change stock until an owner approves them.</string>
+    <string name="counts_name">Stocktake name</string>
+    <string name="counts_name_placeholder">October 2026 stock count</string>
+    <string name="counts_name_counter">%1$d/%2$d</string>
+
+    <!-- More -->
+    <string name="more_title">More</string>
+    <string name="more_history">Stock history</string>
+    <string name="more_history_body">Receipts, sales and adjustments</string>
+    <string name="more_counts">Stock counts</string>
+    <string name="more_counts_body">Count physical stock and review differences</string>
+    <string name="more_expenses">Expenses</string>
+    <string name="more_expenses_body">Record and review shop expenses</string>
+    <string name="more_audit">Audit log</string>
+    <string name="more_audit_body">A record of sensitive changes</string>
+    <string name="more_settings">Settings</string>
+    <string name="more_settings_body">Theme, account and shop preferences</string>
+
+    <!-- Expenses -->
+    <string name="expenses_title">Expenses</string>
+    <string name="expenses_subtitle">Shop spending recorded by staff</string>
+    <string name="expenses_record">Record expense</string>
+    <string name="expenses_loading">Loading expenses…</string>
+    <string name="expenses_empty">No expenses recorded</string>
+    <string name="expenses_empty_body">Record shop spending so the profit report stays accurate.</string>
+    <string name="expenses_no_matches">No matching expenses</string>
+    <string name="expenses_no_matches_body">Try a different search term.</string>
+    <string name="expenses_search">Search title, category or notes</string>
+    <string name="expenses_this_month">This month</string>
+    <string name="expenses_all_recorded">All recorded</string>
+    <string name="expenses_all_recorded_body">Every recorded expense</string>
+    <string name="expenses_entries">Entries</string>
+    <plurals name="expenses_entry_count">
+        <item quantity="one">%1$d expense</item>
+        <item quantity="other">%1$d expenses</item>
+    </plurals>
+    <string name="expenses_save">Save expense</string>
+    <string name="expenses_title_field">What was it for?</string>
+    <string name="expenses_category">Category</string>
+    <string name="expenses_amount">Amount (₦)</string>
+    <string name="expenses_notes">Notes (optional)</string>
+
+    <!-- Audit -->
+    <string name="audit_title">Audit log</string>
+    <string name="audit_subtitle">Important changes made in the shop</string>
+    <string name="audit_loading">Loading audit log…</string>
+    <string name="audit_empty">Nothing audited yet</string>
+    <string name="audit_empty_body">Record an expense and its audit entry will appear here.</string>
+    <string name="audit_no_matches">No matching entries</string>
+    <string name="audit_no_matches_body">Try a different search term.</string>
+    <string name="audit_search">Search actor, action, entity or id</string>
+    <string name="audit_entity_id">ID %1$s</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_theme">Appearance</string>
+    <string name="settings_theme_body">Choose how Everybuy looks on this device.</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_amoled">AMOLED</string>
+    <string name="state_selected">Selected</string>
+    <string name="state_not_selected">Not selected</string>
+    <string name="settings_account">Account</string>
+    <string name="settings_account_body">Signed in to Everybuy.</string>
+    <string name="settings_role">Role</string>
+    <string name="settings_email">Email</string>
+    <string name="settings_name">Display name</string>
+    <string name="settings_profile">Profile</string>
+    <string name="settings_profile_body">Read from your Everybuy account.</string>
+    <string name="settings_edit_name">Edit</string>
+    <string name="settings_shop">Shop details</string>
+    <string name="settings_shop_body_owner">Shown on receipts and reports. Only owners can change these.</string>
+    <string name="settings_shop_body_staff">Only owners can change the shop details.</string>
+    <string name="settings_manage">Manage</string>
+    <string name="settings_team">Team</string>
+    <string name="settings_team_body">Roles, access and pending invitations</string>
+    <string name="settings_catalog">Categories &amp; brands</string>
+    <string name="settings_catalog_body">Organise products used in the inventory</string>
+    <string name="settings_suppliers">Suppliers</string>
+    <string name="settings_suppliers_body">Contacts used when receiving stock</string>
+    <string name="settings_loading">Loading settings…</string>
+    <string name="settings_sign_out_body">Sign out of this device. Your saved session will be removed.</string>
+
+    <!-- Previews -->
+    <string name="preview_sample_product">Baby diapers</string>
+    <string name="preview_sample_brand">Everybuy baby</string>
+    <string name="preview_sample_customer">Amina Bello</string>
 </resources>

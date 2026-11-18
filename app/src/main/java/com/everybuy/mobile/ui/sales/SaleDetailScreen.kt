@@ -1,11 +1,13 @@
 package com.everybuy.mobile.ui.sales
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -74,7 +76,15 @@ import com.everybuy.mobile.data.SaleItemDto
 @Composable private fun SaleDetailContent(sale: SaleDetailDto, customer: CustomerDto?, onCustomerSelected: (String) -> Unit, modifier: Modifier = Modifier) {
     val paid = salePaidTotal(sale)
     val balance = saleBalance(sale)
-    Column(modifier.verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .widthIn(max = 840.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text(sale.saleNumber.ifBlank { "Sale" }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -107,6 +117,7 @@ import com.everybuy.mobile.data.SaleItemDto
             }
         }
         Text("Sale ${sale.saleNumber} · Recorded ${formatLagosDateTime(sale.soldAt)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     }
 }
 

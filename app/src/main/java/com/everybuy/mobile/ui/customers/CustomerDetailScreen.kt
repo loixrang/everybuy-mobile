@@ -2,12 +2,14 @@ package com.everybuy.mobile.ui.customers
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -103,7 +105,15 @@ import java.math.BigDecimal
     var showRepayment by rememberSaveable { mutableStateOf(false) }
     var initialSaleId by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(state.success) { if (state.success != null) showRepayment = false }
-    Column(modifier.verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .widthIn(max = 840.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text(statement.customer.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -173,6 +183,7 @@ import java.math.BigDecimal
         Text("Customer details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         DetailCard(statement)
         Text("Last purchase ${statement.sales.firstOrNull()?.let { formatLagosDate(it.soldAt) } ?: "—"}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     }
 
     if (showRepayment) {

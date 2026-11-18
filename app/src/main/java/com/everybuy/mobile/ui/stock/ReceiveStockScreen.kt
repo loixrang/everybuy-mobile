@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -76,7 +77,15 @@ import java.math.BigDecimal
     val loose = draft.loosePacks.toIntOrNull()?.coerceAtLeast(0) ?: 0
     val totalPacks = product?.let { (bags.toLong() * it.packsPerBag + loose).coerceAtMost(Int.MAX_VALUE.toLong()).toInt() } ?: 0
     val costPreview = draft.unitCost.trim().toBigDecimalOrNull()?.multiply(BigDecimal(totalPacks))?.toPlainString()
-    Column(modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .widthIn(max = 840.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
         Text("Record a delivery and update the shop's pack balance.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         state.suppliersWarning?.let { Text(it, color = MaterialTheme.colorScheme.tertiary) }
@@ -107,6 +116,7 @@ import java.math.BigDecimal
             if (state.saving) CircularProgressIndicator(Modifier.height(18.dp)) else Text("Save receipt")
         }
     }
+    }
 }
 
 @Composable private fun SelectionField(label: String, value: String, error: String?, onClick: () -> Unit) {
@@ -118,7 +128,15 @@ import java.math.BigDecimal
 }
 
 @Composable private fun ReceiptSuccess(state: ReceiveStockState.Success, onBack: () -> Unit, onAgain: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .widthIn(max = 840.dp)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Stock received", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -132,5 +150,6 @@ import java.math.BigDecimal
             TextButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("Done") }
             Button(onClick = onAgain, modifier = Modifier.weight(1f)) { Text("Receive more") }
         }
+    }
     }
 }

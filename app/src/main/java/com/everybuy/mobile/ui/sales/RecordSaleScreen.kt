@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -86,7 +87,15 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
 @Composable private fun SaleSuccess(result: CreateSaleResultDto, onBack: () -> Unit, onViewMovements: () -> Unit, onAnother: () -> Unit, modifier: Modifier = Modifier) {
     val paid = result.payment.firstOrNull()?.amount ?: "0"
     val balance = ((result.sale.itemsTotal.toBigDecimalOrNull() ?: BigDecimal.ZERO) - (paid.toBigDecimalOrNull() ?: BigDecimal.ZERO)).max(BigDecimal.ZERO)
-    Column(modifier.padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .widthIn(max = 840.dp)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(Modifier.padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Sale recorded", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -102,6 +111,7 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
             Button(onClick = onAnother, modifier = Modifier.weight(1f)) { Text("Record another") }
         }
         TextButton(onClick = onViewMovements, modifier = Modifier.padding(top = 4.dp)) { Text("View stock movements") }
+    }
     }
 }
 
@@ -119,7 +129,15 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
     }
     val selectedCustomer = state.customers.firstOrNull { it.id == state.customerId }
 
-    Column(modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .widthIn(max = 840.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Text("Sell packs or bags from the same stock balance. Prices and stock are verified by the server.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         state.customerWarning?.let { Text(it, color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.bodySmall) }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
@@ -178,6 +196,7 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
             if (state.submitting) CircularProgressIndicator(Modifier.height(18.dp)) else Text("Record sale")
         }
         TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Cancel") }
+    }
     }
 }
 

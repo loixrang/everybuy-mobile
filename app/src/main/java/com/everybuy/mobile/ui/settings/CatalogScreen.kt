@@ -1,11 +1,14 @@
 package com.everybuy.mobile.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,8 +27,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -90,8 +93,17 @@ import androidx.hilt.navigation.compose.hiltViewModel
                 Text(current.message, color = MaterialTheme.colorScheme.error)
                 TextButton(onClick = { viewModel.refresh() }) { Text("Retry") }
             }
-            is CatalogState.Ready -> Column(Modifier.fillMaxSize().padding(insets)) {
-                TabRow(selectedTabIndex = kind.ordinal) {
+            is CatalogState.Ready -> Box(
+                Modifier.fillMaxSize().padding(insets),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .widthIn(max = 840.dp),
+                ) {
+                PrimaryTabRow(selectedTabIndex = kind.ordinal, divider = {}) {
                     CatalogKind.entries.forEach { option ->
                         Tab(selected = kind == option, onClick = { kind = option; viewModel.clearFeedback() }, text = { Text(option.name.lowercase().replaceFirstChar { it.uppercase() }) })
                     }
@@ -105,7 +117,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
                             Text("Add the first ${kind.label} using the button below.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
                         }
                     } else {
-                        LazyColumn(Modifier.weight(1f).padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             items(records, key = { it.first }) { record ->
                                 CatalogCard(
                                     name = record.second,
@@ -117,6 +129,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
                             item { Text("", Modifier.padding(bottom = 12.dp)) }
                         }
                     }
+                }
                 }
             }
         }

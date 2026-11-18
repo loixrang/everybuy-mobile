@@ -1,11 +1,14 @@
 package com.everybuy.mobile.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -152,7 +155,15 @@ import com.everybuy.mobile.data.StaffMemberDto
     onDismissFeedback: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .widthIn(max = 840.dp)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         item {
             Text(
                 "${state.members.count { it.active }} active of ${state.members.size} shop member${if (state.members.size == 1) "" else "s"}",
@@ -194,6 +205,7 @@ import com.everybuy.mobile.data.StaffMemberDto
             }
         }
         item { Text("", modifier = Modifier.padding(bottom = 12.dp)) }
+    }
     }
 }
 

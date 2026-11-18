@@ -1,11 +1,14 @@
 package com.everybuy.mobile.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -84,7 +87,17 @@ import com.everybuy.mobile.data.SupplierDto
                 Text(current.message, color = MaterialTheme.colorScheme.error)
                 TextButton(onClick = { viewModel.refresh() }) { Text("Retry") }
             }
-            is SuppliersAdminState.Ready -> Column(Modifier.fillMaxSize().padding(insets).padding(horizontal = 16.dp)) {
+            is SuppliersAdminState.Ready -> Box(
+                Modifier.fillMaxSize().padding(insets),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .widthIn(max = 840.dp)
+                        .padding(horizontal = 16.dp),
+                ) {
                 if (current.notice != null) FeedbackCard(current.notice, false) { viewModel.clearFeedback() }
                 if (current.actionError != null) FeedbackCard(current.actionError, true) { viewModel.clearFeedback() }
                 if (current.suppliers.isEmpty()) {
@@ -104,6 +117,7 @@ import com.everybuy.mobile.data.SupplierDto
                         }
                         item { Text("", Modifier.padding(bottom = 12.dp)) }
                     }
+                }
                 }
             }
         }

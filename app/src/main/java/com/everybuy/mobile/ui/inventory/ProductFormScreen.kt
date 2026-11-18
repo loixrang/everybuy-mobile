@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
@@ -67,7 +68,15 @@ private val packNames = listOf("Small Pack", "Twin Pack", "Jumbo Pack", "Wipes",
 
 @Composable private fun ProductFormContent(state: ProductFormState.Ready, viewModel: ProductFormViewModel, id: String?, onBack: () -> Unit, modifier: Modifier) {
     val d = state.draft
-    Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .widthIn(max = 840.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Text(if (state.editing) "Update product details" else "Define the pack and bag units before receiving stock.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         state.formError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         ProductEntry("Product name", d.name, state.errors["name"], { value -> viewModel.updateDraft { it.copy(name = value) } })
@@ -97,6 +106,7 @@ private val packNames = listOf("Small Pack", "Twin Pack", "Jumbo Pack", "Wipes",
         }
         if (state.categories.isEmpty() || state.brands.isEmpty()) Text("An active brand and category are required. Check the catalog and retry.", color = MaterialTheme.colorScheme.error)
         TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Cancel") }
+    }
     }
 }
 

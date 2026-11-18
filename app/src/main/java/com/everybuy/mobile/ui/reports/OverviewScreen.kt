@@ -4,42 +4,52 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.NavigateBefore
+import androidx.compose.material.icons.automirrored.rounded.NavigateNext
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.everybuy.mobile.R
 import com.everybuy.mobile.core.util.formatLagosDateTime
 import com.everybuy.mobile.core.util.formatNaira
 import com.everybuy.mobile.data.AuthUser
@@ -48,24 +58,34 @@ import com.everybuy.mobile.data.MonthlyProductSold
 import com.everybuy.mobile.data.MonthlyReportDto
 import com.everybuy.mobile.data.OverviewRecentSale
 import com.everybuy.mobile.data.ProfitReportDto
-import com.everybuy.mobile.ui.auth.AppTheme
+import com.everybuy.mobile.ui.components.EmptyPane
+import com.everybuy.mobile.ui.components.ErrorPane
+import com.everybuy.mobile.ui.components.EverybuyScreen
+import com.everybuy.mobile.ui.components.LoadingPane
+import com.everybuy.mobile.ui.components.SectionHeader
+import com.everybuy.mobile.ui.components.StatTile
+import com.everybuy.mobile.ui.components.TonalCard
+import com.everybuy.mobile.ui.components.listBottomPadding
 import java.math.BigDecimal
 
-private enum class OverviewTab(val label: String) { TODAY("Today"), MONTHLY("Monthly"), PROFIT("Profit") }
+private enum class OverviewTab(val labelRes: Int) {
+    TODAY(R.string.overview_today),
+    MONTHLY(R.string.overview_monthly),
+    PROFIT(R.string.overview_profit),
+}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable fun OverviewScreen(
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun OverviewScreen(
     user: AuthUser,
-    theme: AppTheme,
-    onSignOut: () -> Unit,
-    onSessionExpired: () -> Unit,
-    setTheme: (AppTheme) -> Unit,
+    onOpenSettings: () -> Unit,
     onOpenSale: (String) -> Unit = {},
     onOpenProduct: (String) -> Unit = {},
+    onOpenSales: () -> Unit = {},
+    onOpenCustomers: () -> Unit = {},
+    onOpenStock: () -> Unit = {},
     onRecordSale: () -> Unit = {},
-    onOpenExpenses: () -> Unit = {},
-    onOpenAudit: () -> Unit = {},
-    onOpenSettings: () -> Unit = {},
+    onSessionExpired: () -> Unit,
     viewModel: OverviewViewModel = hiltViewModel(),
     monthlyViewModel: MonthlyReportViewModel = hiltViewModel(),
     profitViewModel: ProfitReportViewModel = hiltViewModel(),
@@ -73,10 +93,11 @@ private enum class OverviewTab(val label: String) { TODAY("Today"), MONTHLY("Mon
     val dailyState by viewModel.state.collectAsState()
     val monthlyState by monthlyViewModel.state.collectAsState()
     val profitState by profitViewModel.state.collectAsState()
-    var moreMenu by remember { mutableStateOf(false) }
     var tab by rememberSaveable { mutableStateOf(OverviewTab.TODAY) }
     var month by rememberSaveable { mutableStateOf(currentLagosMonth()) }
-    LaunchedEffect(dailyState) { if ((dailyState as? OverviewState.Failed)?.sessionExpired == true) onSessionExpired() }
+    LaunchedEffect(dailyState) {
+        if ((dailyState as? OverviewState.Failed)?.sessionExpired == true) onSessionExpired()
+    }
     LaunchedEffect(monthlyState) { if (monthlyState is MonthlyReportState.SessionExpired) onSessionExpired() }
     LaunchedEffect(profitState) { if (profitState is ProfitReportState.SessionExpired) onSessionExpired() }
     LaunchedEffect(tab, month) {
@@ -86,129 +107,269 @@ private enum class OverviewTab(val label: String) { TODAY("Today"), MONTHLY("Mon
             OverviewTab.TODAY -> Unit
         }
     }
-    Scaffold(topBar = {
-        TopAppBar(title = { Column { Text("Overview"); Text(user.name.ifBlank { user.email }, style = MaterialTheme.typography.labelMedium) } }, actions = {
-            Box {
-                TextButton(onClick = { moreMenu = true }) { Text("More") }
-                DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
-                    DropdownMenuItem(text = { Text("Expenses") }, onClick = { moreMenu = false; onOpenExpenses() })
-                    DropdownMenuItem(text = { Text("Audit log") }, onClick = { moreMenu = false; onOpenAudit() })
-                    DropdownMenuItem(text = { Text("Settings") }, onClick = { moreMenu = false; onOpenSettings() })
-                    AppTheme.entries.forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text("${option.name.lowercase().replaceFirstChar { it.uppercase() }} theme") },
-                            onClick = { moreMenu = false; setTheme(option) },
+    EverybuyScreen(
+        title = stringResource(R.string.overview_title),
+        subtitle = user.name.ifBlank { user.email },
+        onOpenSettings = onOpenSettings,
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onRecordSale,
+                icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
+                text = { Text(stringResource(R.string.overview_record_sale)) },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        },
+    ) { padding ->
+        Column(Modifier.fillMaxSize()) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding()),
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+            ) {
+                PrimaryTabRow(
+                    selectedTabIndex = tab.ordinal,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    divider = {},
+                ) {
+                    OverviewTab.entries.forEach { option ->
+                        Tab(
+                            selected = tab == option,
+                            onClick = { tab = option },
+                            text = {
+                                Text(
+                                    text = stringResource(option.labelRes),
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.labelLarge,
+                                )
+                            },
                         )
                     }
                 }
             }
-            TextButton(onClick = onSignOut) { Text("Sign out") }
-        })
-    }) { inset ->
-        Column(Modifier.fillMaxSize().padding(inset)) {
-            TabRow(selectedTabIndex = tab.ordinal) {
-                OverviewTab.entries.forEach { option ->
-                    Tab(selected = tab == option, onClick = { tab = option }, text = { Text(option.label) })
-                }
-            }
+            val bottom = padding.calculateBottomPadding() + listBottomPadding(extra = 104.dp)
             when (tab) {
-                OverviewTab.TODAY -> TodayPanel(dailyState, viewModel, onOpenSale, onOpenProduct, onRecordSale, Modifier.fillMaxSize())
-                OverviewTab.MONTHLY -> MonthlyPanel(monthlyState, month, { month = it }, { monthlyViewModel.load(month) }, Modifier.fillMaxSize())
-                OverviewTab.PROFIT -> ProfitPanel(profitState, month, { month = it }, { profitViewModel.load(month) }, onOpenSale, Modifier.fillMaxSize())
+                OverviewTab.TODAY -> TodayPanel(
+                    state = dailyState,
+                    onRetry = { viewModel.refresh() },
+                    onOpenSale = onOpenSale,
+                    onOpenProduct = onOpenProduct,
+                    onOpenSales = onOpenSales,
+                    onOpenCustomers = onOpenCustomers,
+                    onOpenStock = onOpenStock,
+                    bottomPadding = bottom,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                OverviewTab.MONTHLY -> MonthlyPanel(
+                    state = monthlyState,
+                    month = month,
+                    onMonthChange = { month = it },
+                    onRetry = { monthlyViewModel.load(month) },
+                    bottomPadding = bottom,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                OverviewTab.PROFIT -> ProfitPanel(
+                    state = profitState,
+                    month = month,
+                    onMonthChange = { month = it },
+                    onRetry = { profitViewModel.load(month) },
+                    onOpenSale = onOpenSale,
+                    bottomPadding = bottom,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
         }
     }
 }
 
-@Composable private fun TodayPanel(
+@Composable
+private fun TodayPanel(
     state: OverviewState,
-    viewModel: OverviewViewModel,
+    onRetry: () -> Unit,
     onOpenSale: (String) -> Unit,
     onOpenProduct: (String) -> Unit,
-    onRecordSale: () -> Unit,
+    onOpenSales: () -> Unit,
+    onOpenCustomers: () -> Unit,
+    onOpenStock: () -> Unit,
+    bottomPadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
-        OverviewState.Loading -> Loading("Loading today’s overview…", modifier)
-        is OverviewState.Failed -> ReportFailure(state.message, state.forbidden, { viewModel.refresh() }, modifier)
-        is OverviewState.Ready -> LazyColumn(modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item {
-                Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Today at a glance", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Button(onClick = onRecordSale) { Text("Record sale") }
+        OverviewState.Loading -> LoadingPane(stringResource(R.string.overview_loading), modifier)
+        is OverviewState.Failed -> ErrorPane(state.message, if (state.forbidden) null else onRetry, modifier)
+        is OverviewState.Ready -> {
+            val report = state.report
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 168.dp),
+                modifier = modifier,
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 12.dp,
+                    bottom = bottomPadding,
+                ),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    SectionHeader(title = stringResource(R.string.overview_at_a_glance))
+                }
+                item {
+                    StatTile(
+                        label = stringResource(R.string.overview_sales_today),
+                        value = formatNaira(report.salesToday.total),
+                        supporting = pluralStringResource(
+                            R.plurals.overview_sales_count,
+                            report.salesToday.count,
+                            report.salesToday.count,
+                        ),
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        onClick = onOpenSales,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    StatTile(
+                        label = stringResource(R.string.overview_payments_received),
+                        value = formatNaira(report.paymentsReceived),
+                        supporting = stringResource(R.string.overview_payments_detail),
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        onClick = onOpenSales,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    val outstanding = positive(report.customerBalances)
+                    StatTile(
+                        label = stringResource(R.string.overview_customer_balances),
+                        value = formatNaira(report.customerBalances),
+                        supporting = stringResource(R.string.overview_balance_detail),
+                        containerColor = if (outstanding) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                        contentColor = if (outstanding) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface,
+                        onClick = onOpenCustomers,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    val low = report.lowStock.isNotEmpty()
+                    StatTile(
+                        label = stringResource(R.string.overview_low_stock_stat),
+                        value = report.lowStock.size.toString(),
+                        supporting = stringResource(R.string.overview_low_stock_detail),
+                        containerColor = if (low) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = if (low) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer,
+                        onClick = onOpenStock,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    SectionHeader(title = stringResource(R.string.overview_low_stock_section))
+                }
+                if (report.lowStock.isEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        EmptyPane(title = stringResource(R.string.overview_no_low_stock), body = "")
+                    }
+                } else {
+                    items(report.lowStock, key = { "low-${it.productId}" }) { item ->
+                        TonalCard(onClick = { onOpenProduct(item.productId) }, modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = item.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    text = "${item.packsAvailable} packs",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
+                        }
+                    }
+                }
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    SectionHeader(title = stringResource(R.string.overview_recent_sales))
+                }
+                if (report.recentSales.isEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        EmptyPane(title = stringResource(R.string.overview_no_sales), body = "")
+                    }
+                } else {
+                    items(report.recentSales, key = { "sale-${it.id}" }) { sale ->
+                        RecentSaleCard(sale) { onOpenSale(sale.id) }
+                    }
                 }
             }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ReportSummaryCard("Sales today", formatNaira(state.report.salesToday.total), "${state.report.salesToday.count} sales", Modifier.weight(1f))
-                        ReportSummaryCard("Payments received", formatNaira(state.report.paymentsReceived), "Includes repayments", Modifier.weight(1f))
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ReportSummaryCard("Customer balances", formatNaira(state.report.customerBalances), "Outstanding", Modifier.weight(1f), warning = positive(state.report.customerBalances))
-                        ReportSummaryCard("Low stock", state.report.lowStock.size.toString(), "10 packs or fewer", Modifier.weight(1f), warning = state.report.lowStock.isNotEmpty())
-                    }
-                }
-            }
-            item { SectionTitle("Low stock") }
-            if (state.report.lowStock.isEmpty()) item { MutedText("Every product is above the low-stock threshold.") }
-            else items(state.report.lowStock, key = { it.productId }) { item ->
-                CompactCard(item.name, "${item.packsAvailable} packs available") { onOpenProduct(item.productId) }
-            }
-            item { SectionTitle("Recent sales") }
-            if (state.report.recentSales.isEmpty()) item { MutedText("No sales recorded today.") }
-            else items(state.report.recentSales, key = { it.id }) { sale -> RecentSaleCard(sale) { onOpenSale(sale.id) } }
-            item { Spacer(Modifier.height(12.dp)) }
         }
     }
 }
 
-@Composable private fun MonthlyPanel(
+@Composable
+private fun MonthlyPanel(
     state: MonthlyReportState,
     month: String,
     onMonthChange: (String) -> Unit,
     onRetry: () -> Unit,
+    bottomPadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = bottomPadding),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         item { MonthHeader(month, onMonthChange) }
-        item { MutedText("Money received includes payments for earlier sales, and outstanding debt counts only what was still unpaid at month end.") }
         when (state) {
-            MonthlyReportState.Loading -> item { Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
-            MonthlyReportState.SessionExpired -> item { ReportFailure("Your session has expired.", true, onRetry) }
-            is MonthlyReportState.Failed -> item { ReportFailure(state.message, false, onRetry) }
+            MonthlyReportState.Loading -> item { LoadingPane(stringResource(R.string.loading)) }
+            MonthlyReportState.SessionExpired -> item { ErrorPane(stringResource(R.string.session_expired), onRetry) }
+            is MonthlyReportState.Failed -> item { ErrorPane(state.message, onRetry) }
             is MonthlyReportState.Ready -> {
                 val report = state.report
                 item { MonthlySummary(report) }
-                item { SectionTitle("Product sales") }
-                item { MutedText("Bags and packs sold during ${formatMonthLabel(report.month.ifBlank { month })}.") }
-                if (report.productsSold.isEmpty()) item { MutedText("No products were sold in this month.") }
+                item { SectionHeader(title = stringResource(R.string.overview_product_sales)) }
+                if (report.productsSold.isEmpty()) item { EmptyPane(title = stringResource(R.string.overview_no_product_sales), body = "") }
                 else items(report.productsSold, key = { it.productId }) { product -> ProductSoldCard(product) }
-                item { SectionTitle("Closing stock") }
-                item { MutedText("Pack balance at the end of the month, not current stock.") }
-                if (report.closingStock.isEmpty()) item { MutedText("No products existed at the end of this month.") }
+                item { SectionHeader(title = stringResource(R.string.overview_closing_stock)) }
+                if (report.closingStock.isEmpty()) item { EmptyPane(title = stringResource(R.string.overview_no_closing_stock), body = "") }
                 else items(report.closingStock, key = { it.productId }) { product -> ClosingStockCard(product) }
             }
         }
-        item { Spacer(Modifier.height(12.dp)) }
     }
 }
 
-@Composable private fun ProfitPanel(
+@Composable
+private fun ProfitPanel(
     state: ProfitReportState,
     month: String,
     onMonthChange: (String) -> Unit,
     onRetry: () -> Unit,
     onOpenSale: (String) -> Unit,
+    bottomPadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = bottomPadding),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         item { MonthHeader(month, onMonthChange) }
-        item { MutedText("Revenue is what customers were charged. Cost of goods uses the recorded cost per pack at the time of each sale, and expenses are dated in this month.") }
         when (state) {
-            ProfitReportState.Loading -> item { Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
-            ProfitReportState.SessionExpired -> item { ReportFailure("Your session has expired.", true, onRetry) }
-            is ProfitReportState.Failed -> item { ReportFailure(state.message, false, onRetry) }
+            ProfitReportState.Loading -> item { LoadingPane(stringResource(R.string.loading)) }
+            ProfitReportState.SessionExpired -> item { ErrorPane(stringResource(R.string.session_expired), onRetry) }
+            is ProfitReportState.Failed -> item { ErrorPane(state.message, onRetry) }
             is ProfitReportState.Ready -> {
                 val report = state.report
                 if (report.missingCostCount > 0) {
@@ -219,71 +380,169 @@ private enum class OverviewTab(val label: String) { TODAY("Today"), MONTHLY("Mon
                 }
             }
         }
-        item { Spacer(Modifier.height(12.dp)) }
     }
 }
 
-@Composable private fun MonthHeader(month: String, onMonthChange: (String) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { onMonthChange(shiftMonth(month, -1)) }) { Text("‹ Previous") }
-            Text(formatMonthLabel(month), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 4.dp))
-            TextButton(onClick = { onMonthChange(shiftMonth(month, 1)) }) { Text("Next ›") }
+@Composable
+private fun MonthHeader(month: String, onMonthChange: (String) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            FilledTonalIconButton(onClick = { onMonthChange(shiftMonth(month, -1)) }) {
+                Icon(Icons.AutoMirrored.Rounded.NavigateBefore, contentDescription = stringResource(R.string.overview_previous_month))
+            }
+            Text(
+                text = formatMonthLabel(month),
+                style = MaterialTheme.typography.titleMediumEmphasized,
+                fontWeight = FontWeight.SemiBold,
+            )
+            FilledTonalIconButton(onClick = { onMonthChange(shiftMonth(month, 1)) }) {
+                Icon(Icons.AutoMirrored.Rounded.NavigateNext, contentDescription = stringResource(R.string.overview_next_month))
+            }
         }
-        if (month != currentLagosMonth()) TextButton(onClick = { onMonthChange(currentLagosMonth()) }) { Text("This month") }
+        if (month != currentLagosMonth()) {
+            FilledTonalButton(onClick = { onMonthChange(currentLagosMonth()) }) {
+                Text(stringResource(R.string.overview_this_month))
+            }
+        }
     }
 }
 
-@Composable private fun MonthlySummary(report: MonthlyReportDto) {
+@Composable
+private fun MonthlySummary(report: MonthlyReportDto) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ReportSummaryCard("Sales", formatNaira(report.salesTotal), "Recorded this month", Modifier.weight(1f))
-            ReportSummaryCard("Money received", formatNaira(report.moneyReceived), "Payments this month", Modifier.weight(1f))
+            StatTile(
+                label = stringResource(R.string.overview_monthly_sales),
+                value = formatNaira(report.salesTotal),
+                supporting = "",
+                modifier = Modifier.weight(1f),
+            )
+            StatTile(
+                label = stringResource(R.string.overview_money_received),
+                value = formatNaira(report.moneyReceived),
+                supporting = "",
+                modifier = Modifier.weight(1f),
+            )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ReportSummaryCard("Outstanding debt", formatNaira(report.outstandingDebtAtMonthEnd), "At month end", Modifier.weight(1f), warning = positive(report.outstandingDebtAtMonthEnd))
-            ReportSummaryCard("Products sold", report.productsSold.size.toString(), "Product lines", Modifier.weight(1f))
+            val outstanding = positive(report.outstandingDebtAtMonthEnd)
+            StatTile(
+                label = stringResource(R.string.overview_outstanding_debt),
+                value = formatNaira(report.outstandingDebtAtMonthEnd),
+                supporting = "",
+                containerColor = if (outstanding) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = if (outstanding) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.weight(1f),
+            )
+            StatTile(
+                label = stringResource(R.string.overview_products_sold),
+                value = report.productsSold.size.toString(),
+                supporting = "",
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
 
-@Composable private fun ProductSoldCard(product: MonthlyProductSold) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+@Composable
+private fun ProductSoldCard(product: MonthlyProductSold) {
+    TonalCard(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Column(Modifier.weight(1f)) {
                 Text(product.productName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text("${product.bagsSold} bags · ${product.retailPacksSold} retail packs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "${product.bagsSold} bags · ${product.retailPacksSold} retail packs",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            Text("${product.totalPacksSold} packs", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(
+                "${product.totalPacksSold} packs",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }
 
-@Composable private fun ClosingStockCard(product: MonthlyClosingStock) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(product.productName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Text("${product.closingPacks} packs", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+@Composable
+private fun ClosingStockCard(product: MonthlyClosingStock) {
+    TonalCard(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                product.productName,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                "${product.closingPacks} packs",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
 
-@Composable private fun ProfitSummary(report: ProfitReportDto) {
+@Composable
+private fun ProfitSummary(report: ProfitReportDto) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ReportSummaryCard("Revenue", formatNaira(report.revenue.orEmpty()), "Total sales value", Modifier.weight(1f))
-            ReportSummaryCard("Cost of goods", formatNaira(report.cogs.orEmpty()), "Recorded pack costs", Modifier.weight(1f))
+            StatTile(
+                label = stringResource(R.string.overview_revenue),
+                value = formatNaira(report.revenue.orEmpty()),
+                supporting = "",
+                modifier = Modifier.weight(1f),
+            )
+            StatTile(
+                label = stringResource(R.string.overview_cogs),
+                value = formatNaira(report.cogs.orEmpty()),
+                supporting = "",
+                modifier = Modifier.weight(1f),
+            )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ReportSummaryCard("Gross profit", formatNaira(report.grossProfit.orEmpty()), "Revenue minus cost", Modifier.weight(1f), warning = negative(report.grossProfit))
-            ReportSummaryCard("Net profit", formatNaira(report.netProfit.orEmpty()), "After expenses", Modifier.weight(1f), warning = negative(report.netProfit))
+            val grossNegative = negative(report.grossProfit)
+            StatTile(
+                label = stringResource(R.string.overview_gross_profit),
+                value = formatNaira(report.grossProfit.orEmpty()),
+                supporting = "",
+                containerColor = if (grossNegative) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = if (grossNegative) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.weight(1f),
+            )
+            val netNegative = negative(report.netProfit)
+            StatTile(
+                label = stringResource(R.string.overview_net_profit),
+                value = formatNaira(report.netProfit.orEmpty()),
+                supporting = "",
+                containerColor = if (netNegative) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+                contentColor = if (netNegative) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
 
-@Composable private fun ProfitBreakdown(report: ProfitReportDto) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+@Composable
+private fun ProfitBreakdown(report: ProfitReportDto) {
+    TonalCard(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.fillMaxWidth().padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Text("How net profit is calculated", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             ProfitRow("Revenue", report.revenue.orEmpty())
             ProfitRow("Less cost of goods sold", report.cogs.orEmpty(), negative = true)
@@ -294,10 +553,15 @@ private enum class OverviewTab(val label: String) { TODAY("Today"), MONTHLY("Mon
     }
 }
 
-@Composable private fun ProfitRow(label: String, value: String, negative: Boolean = false, strong: Boolean = false) {
+@Composable
+private fun ProfitRow(label: String, value: String, negative: Boolean = false, strong: Boolean = false) {
     val amount = value.toBigDecimalOrNull() ?: BigDecimal.ZERO
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = if (strong) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall, color = if (strong) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label,
+            style = if (strong) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
+            color = if (strong) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Text(
             (if (negative) "− " else "") + formatNaira(amount.abs().toPlainString()),
             style = MaterialTheme.typography.bodyMedium,
@@ -307,10 +571,19 @@ private enum class OverviewTab(val label: String) { TODAY("Today"), MONTHLY("Mon
     }
 }
 
-@Composable private fun MissingCostWarning(report: ProfitReportDto, onOpenSale: (String) -> Unit) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Profit cannot be calculated", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+@Composable
+private fun MissingCostWarning(report: ProfitReportDto, onOpenSale: (String) -> Unit) {
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                "Profit cannot be calculated",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
             Text(
                 "${report.missingCostCount} sale item cost snapshot${if (report.missingCostCount == 1) " is" else "s are"} missing. Profit figures stay hidden until an owner confirms the historical acquisition costs.",
                 style = MaterialTheme.typography.bodySmall,
@@ -325,72 +598,51 @@ private enum class OverviewTab(val label: String) { TODAY("Today"), MONTHLY("Mon
                     modifier = Modifier.padding(top = 4.dp).clickable { onOpenSale(sale.saleId) },
                 )
                 sale.items.forEach { item ->
-                    Text("${item.productName} · ${item.quantity} line units / ${item.quantity * item.packsPerUnit} packs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 12.dp))
+                    Text(
+                        "${item.productName} · ${item.quantity} line units / ${item.quantity * item.packsPerUnit} packs",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 12.dp),
+                    )
                 }
             }
         }
     }
 }
 
-@Composable private fun ReportSummaryCard(label: String, value: String, detail: String, modifier: Modifier = Modifier, warning: Boolean = false) {
-    Card(modifier, shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
-            Text(
-                value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (warning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.padding(top = 6.dp),
-            )
-            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(top = 2.dp))
-        }
-    }
-}
-
-@Composable private fun SectionTitle(title: String) {
-    Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
-}
-
-@Composable private fun MutedText(text: String) {
-    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-}
-
-@Composable private fun Loading(message: String, modifier: Modifier = Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        CircularProgressIndicator()
-        Text(message, Modifier.padding(top = 12.dp))
-    }
-}
-
-@Composable private fun ReportFailure(message: String, forbidden: Boolean, onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(if (forbidden) "Reports unavailable" else "Couldn’t load report", style = MaterialTheme.typography.titleLarge)
-        Text(message, Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (!forbidden) TextButton(onClick = onRetry) { Text("Retry") }
-    }
-}
-
-@Composable private fun CompactCard(title: String, supporting: String, onOpen: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = onOpen), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            Text(supporting, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable private fun RecentSaleCard(sale: OverviewRecentSale, onOpen: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = onOpen), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+@Composable
+private fun RecentSaleCard(sale: OverviewRecentSale, onOpen: () -> Unit) {
+    TonalCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onOpen,
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Column(Modifier.weight(1f)) {
                 Text(sale.reference, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(sale.customer?.name ?: "Walk-in customer", style = MaterialTheme.typography.bodyMedium)
-                Text(formatLagosDateTime(sale.soldAt), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(sale.customer?.name ?: stringResource(R.string.sales_walk_in), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    formatLagosDateTime(sale.soldAt),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(formatNaira(sale.itemsTotal), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                if (positive(sale.balance)) Text("Due ${formatNaira(sale.balance)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                Text(
+                    formatNaira(sale.itemsTotal),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (positive(sale.balance)) {
+                    Text(
+                        "Due ${formatNaira(sale.balance)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         }
     }
