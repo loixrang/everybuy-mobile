@@ -11,15 +11,13 @@ import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Assessment
 import androidx.compose.material.icons.rounded.Inventory2
-import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ShortNavigationBar
-import androidx.compose.material3.ShortNavigationBarArrangement
-import androidx.compose.material3.ShortNavigationBarItem
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.WideNavigationRail
 import androidx.compose.material3.WideNavigationRailDefaults
@@ -84,9 +82,8 @@ private data class MainDestination(val route: String, val labelRes: Int, val ico
 private val destinations = listOf(
     MainDestination("inventory", R.string.nav_stock, Icons.Rounded.Inventory2),
     MainDestination("sales", R.string.nav_sales, Icons.Rounded.ShoppingBag),
-    MainDestination("overview", R.string.nav_overview, Icons.Rounded.Assessment),
     MainDestination("customers", R.string.nav_customers, Icons.Rounded.People),
-    MainDestination("more", R.string.nav_more, Icons.Rounded.MoreHoriz),
+    MainDestination("overview", R.string.nav_overview, Icons.Rounded.Assessment),
 )
 
 private val mainRoutes = destinations.map { it.route }.toSet()
@@ -183,25 +180,24 @@ fun AuthenticatedApp(
                                 .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
                                 .glass(hazeState),
                         )
-                        ShortNavigationBar(
+                        NavigationBar(
                             modifier = Modifier.fillMaxWidth(),
                             containerColor = Color.Transparent,
-                            contentColor = MaterialTheme.colorScheme.onSurface,
-                            arrangement = ShortNavigationBarArrangement.EqualWeight,
                         ) {
                             destinations.forEach { item ->
                                 val selected = destination?.hierarchy?.any { it.route == item.route } == true
                                 val label = stringResource(item.labelRes)
-                                ShortNavigationBarItem(
+                                NavigationBarItem(
                                     selected = selected,
                                     onClick = { navigateTo(item.route) },
                                     icon = { Icon(item.icon, contentDescription = label) },
+                                    alwaysShowLabel = true,
                                     label = {
                                         Text(
                                             text = label,
                                             maxLines = 1,
                                             softWrap = false,
-                                            overflow = TextOverflow.Visible,
+                                            overflow = TextOverflow.Clip,
                                             style = MaterialTheme.typography.labelSmall,
                                         )
                                     },

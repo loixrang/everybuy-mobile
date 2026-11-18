@@ -23,8 +23,8 @@
 
     <!-- Navigation -->
     <string name="nav_stock">Stock</string>
-    <string name="nav_sales">Sales</string>
-    <string name="nav_overview">Overview</string>
+    <string name="nav_sales">Sale</string>
+    <string name="nav_overview">Reports</string>
     <string name="nav_customers">Customers</string>
     <string name="nav_more">More</string>
 
@@ -52,7 +52,6 @@
     <string name="inventory_loading">Loading products…</string>
     <string name="inventory_empty">No active products yet.</string>
     <string name="inventory_no_matches">No products match your search.</string>
-    <string name="inventory_all_products">All products</string>
     <string name="inventory_all_categories">All categories</string>
     <plurals name="inventory_products_count">
         <item quantity="one">%1$d product</item>

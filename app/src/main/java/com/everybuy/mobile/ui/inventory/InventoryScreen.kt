@@ -39,7 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.everybuy.mobile.R
 import com.everybuy.mobile.core.util.formatNaira
 import com.everybuy.mobile.data.AuthUser
@@ -55,13 +55,6 @@ import com.everybuy.mobile.ui.components.TonalCard
 import com.everybuy.mobile.ui.components.listBottomPadding
 
 private const val LOW_STOCK_THRESHOLD = 10
-private val packOptions = listOf(
-    "All products" to "ALL",
-    "Diapers" to "Small Pack",
-    "Baby wipes" to "Wipes",
-    "Sanitary pads" to "Pad",
-    "Tissue" to "Tissue",
-)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -77,13 +70,13 @@ fun InventoryScreen(
     val state by viewModel.state.collectAsState()
     LaunchedEffect(state) { if (state is InventoryState.Unauthorized) onSessionExpired() }
     var search by rememberSaveable { mutableStateOf("") }
-    var packFilter by rememberSaveable { mutableStateOf("ALL") }
     var categoryFilter by rememberSaveable { mutableStateOf("ALL") }
 
     EverybuyScreen(
         title = stringResource(R.string.inventory_title),
         subtitle = user.name.ifBlank { user.email },
         onOpenSettings = onOpenSettings,
+        compactHeader = true,
         floatingActionButton = if (isOwner) {
             {
                 ExtendedFloatingActionButton(
@@ -115,8 +108,7 @@ fun InventoryScreen(
                 val categoryNames = inventory.categories.associate { it.id to it.name }
                 val brandNames = inventory.brands.associate { it.id to it.name }
                 val filtered = inventory.products.filter { product ->
-                    (packFilter == "ALL" || product.packName == packFilter) &&
-                        (categoryFilter == "ALL" || product.categoryId == categoryFilter) &&
+                    (categoryFilter == "ALL" || product.categoryId == categoryFilter) &&
                         "${product.name} ${product.packName} ${product.size.orEmpty()} ${categoryNames[product.categoryId].orEmpty()} ${brandNames[product.brandId].orEmpty()}"
                             .contains(search.trim(), ignoreCase = true)
                 }
@@ -128,11 +120,11 @@ fun InventoryScreen(
                         end = 16.dp,
                         top = padding.calculateTopPadding() + 4.dp,
                         bottom = padding.calculateBottomPadding() + listBottomPadding(
-                            extra = if (isOwner) 104.dp else 24.dp,
+                            extra = 16.dp,
                         ),
                     ),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         ExpressiveSearchField(
@@ -140,20 +132,6 @@ fun InventoryScreen(
                             onValueChange = { search = it },
                             placeholder = stringResource(R.string.inventory_search),
                         )
-                    }
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(packOptions, key = { it.second }) { (label, value) ->
-                                FilterChip(
-                                    selected = packFilter == value,
-                                    onClick = { packFilter = value },
-                                    label = { Text(label) },
-                                    leadingIcon = if (packFilter == value) {
-                                        { Icon(Icons.Rounded.Check, contentDescription = null) }
-                                    } else null,
-                                )
-                            }
-                        }
                     }
                     if (inventory.categories.isNotEmpty()) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -184,7 +162,7 @@ fun InventoryScreen(
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(
                             title = pluralStringResource(R.plurals.inventory_products_count, filtered.size, filtered.size),
-                            supporting = if (search.isBlank() && packFilter == "ALL" && categoryFilter == "ALL") {
+                            supporting = if (search.isBlank() && categoryFilter == "ALL") {
                                 stringResource(R.string.inventory_subtitle)
                             } else null,
                         )

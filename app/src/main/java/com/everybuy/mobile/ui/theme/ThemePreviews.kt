@@ -15,15 +15,14 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Assessment
 import androidx.compose.material.icons.rounded.Inventory2
-import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ShortNavigationBar
-import androidx.compose.material3.ShortNavigationBarItem
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.WideNavigationRail
 import androidx.compose.material3.WideNavigationRailItem
@@ -59,9 +58,8 @@ private data class PreviewNavItem(
 private val previewNavItems = listOf(
     PreviewNavItem(R.string.nav_stock, Icons.Rounded.Inventory2),
     PreviewNavItem(R.string.nav_sales, Icons.Rounded.ShoppingBag),
-    PreviewNavItem(R.string.nav_overview, Icons.Rounded.Assessment),
     PreviewNavItem(R.string.nav_customers, Icons.Rounded.People),
-    PreviewNavItem(R.string.nav_more, Icons.Rounded.MoreHoriz),
+    PreviewNavItem(R.string.nav_overview, Icons.Rounded.Assessment),
 )
 
 @Preview(name = "Compact light", widthDp = 400, heightDp = 880, showBackground = true)
@@ -166,17 +164,18 @@ private fun PreviewApp(dark: Boolean, rail: Boolean, expandedRail: Boolean) {
                         PreviewBody(padding)
                     }
                     if (!rail) {
-                        ShortNavigationBar(
+                        NavigationBar(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth(),
                         ) {
                             previewNavItems.forEachIndexed { index, item ->
                                 val label = stringResource(item.labelRes)
-                                ShortNavigationBarItem(
+                                NavigationBarItem(
                                     selected = index == 0,
                                     onClick = {},
                                     icon = { Icon(item.icon, contentDescription = label) },
+                                    alwaysShowLabel = true,
                                     label = {
                                         Text(
                                             text = label,
@@ -219,11 +218,6 @@ private fun PreviewBody(padding: PaddingValues) {
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = true,
-                    onClick = {},
-                    label = { Text(stringResource(R.string.inventory_all_products)) },
-                )
                 FilterChip(
                     selected = false,
                     onClick = {},

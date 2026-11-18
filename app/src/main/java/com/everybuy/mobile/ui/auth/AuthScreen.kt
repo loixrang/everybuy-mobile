@@ -1,16 +1,13 @@
 package com.everybuy.mobile.ui.auth
 
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -42,11 +40,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -54,8 +52,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -87,34 +85,47 @@ fun AuthScreen(
         }
         return
     }
-    AnimatedContent(
-        targetState = state is AuthState.SignedIn,
-        transitionSpec = {
-            if (systemAnimationsEnabled()) {
-                (fadeIn(tween(520)) + scaleIn(initialScale = 0.96f, animationSpec = tween(520))) togetherWith fadeOut(tween(220))
-            } else {
-                fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+    val screenKey = when (state) {
+        AuthState.Loading -> "loading"
+        is AuthState.SignedIn -> "signed_in"
+        else -> "auth"
+    }
+    key(screenKey) {
+        val animationsEnabled = systemAnimationsEnabled()
+        val alpha = androidx.compose.runtime.remember {
+            Animatable(if (animationsEnabled) 0f else 1f)
+        }
+        LaunchedEffect(alpha) {
+            if (animationsEnabled) {
+                alpha.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
+                )
             }
-        },
-        label = "auth_transition",
-    ) { signedIn ->
-        if (signedIn) {
-            val current = state as? AuthState.SignedIn ?: return@AnimatedContent
-            AuthenticatedApp(
-                user = current.user,
-                staff = current.staff,
-                theme = theme,
-                onSignOut = signOut,
-                setTheme = setTheme,
-            )
-        } else {
-            AuthFlow(
-                state = state,
-                signIn = signIn,
-                verifyTotp = verifyTotp,
-                retrySession = retrySession,
-                signOut = signOut,
-            )
+        }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { this.alpha = alpha.value },
+        ) {
+            val current = state as? AuthState.SignedIn
+            if (current != null) {
+                AuthenticatedApp(
+                    user = current.user,
+                    staff = current.staff,
+                    theme = theme,
+                    onSignOut = signOut,
+                    setTheme = setTheme,
+                )
+            } else {
+                AuthFlow(
+                    state = state,
+                    signIn = signIn,
+                    verifyTotp = verifyTotp,
+                    retrySession = retrySession,
+                    signOut = signOut,
+                )
+            }
         }
     }
 }
@@ -209,7 +220,7 @@ private fun BrandMark() {
             end = androidx.compose.material3.MaterialShapes.Cookie12Sided,
         )
     }
-    val shapeColor = MaterialTheme.colorScheme.primary
+    val shapeColor = MaterialTheme.colorScheme.primaryContainer
     Box(Modifier.size(104.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val path = morph.toPath(progress)
@@ -223,7 +234,7 @@ private fun BrandMark() {
         Icon(
             imageVector = Icons.Rounded.ShoppingBag,
             contentDescription = stringResource(R.string.splash_brand_mark),
-            tint = MaterialTheme.colorScheme.onPrimary,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
             modifier = Modifier.size(46.dp),
         )
     }
@@ -271,6 +282,7 @@ private fun SignInScreen(
                 text = stringResource(R.string.auth_title),
                 style = MaterialTheme.typography.displaySmallEmphasized,
                 fontWeight = FontWeight.SemiBold,
+                color = colors.onSurface,
                 modifier = Modifier.padding(top = 16.dp),
             )
             Text(
@@ -339,6 +351,10 @@ private fun SignInScreen(
                                     onClick = { signIn(email, password) },
                                     modifier = Modifier.fillMaxWidth(),
                                     enabled = email.isNotBlank() && password.isNotBlank(),
+                                    colors = ButtonDefaults.buttonColors(
+                                        disabledContainerColor = colors.surfaceContainerHigh,
+                                        disabledContentColor = colors.onSurfaceVariant,
+                                    ),
                                 ) { Text(stringResource(R.string.auth_sign_in)) }
                                 TextButton(
                                     onClick = { showForgot = true },
