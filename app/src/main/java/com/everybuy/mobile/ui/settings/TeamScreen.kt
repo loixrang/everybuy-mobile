@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,7 +17,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material3.AlertDialog
+import com.everybuy.mobile.ui.components.GlassAlertDialog as AlertDialog
+import com.everybuy.mobile.ui.components.GlassModalBottomSheet
+import com.everybuy.mobile.ui.components.SheetHeader
+import com.everybuy.mobile.ui.components.SheetSelectRow
+import kotlinx.coroutines.launch
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -24,6 +29,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -37,13 +43,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.everybuy.mobile.core.util.formatLagosDate
 import com.everybuy.mobile.data.StaffInvitationDto
 import com.everybuy.mobile.data.StaffMemberDto
@@ -263,22 +271,47 @@ import com.everybuy.mobile.data.StaffMemberDto
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun ChoiceDialog(title: String, message: String, options: List<String>, current: String, onDismiss: () -> Unit, onSelect: (String) -> Unit) {
-    AlertDialog(
+    val scope = rememberCoroutineScope()
+    val sheetState = androidx.compose.material3.rememberBottomSheetState(
+        initialValue = androidx.compose.material3.SheetValue.Hidden,
+    )
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                options.forEach { option ->
-                    Button(onClick = { onSelect(option) }, enabled = option != current, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (option == current) "$option (current)" else option)
-                    }
+        sheetState = sheetState,
+    ) {
+        Column(
+            Modifier.fillMaxWidth().heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.7f),
+        ) {
+            SheetHeader(title, onClose = {
+                scope.launch {
+                    sheetState.hide()
+                    onDismiss()
+                }
+            })
+            Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+            options.forEachIndexed { index, option ->
+                SheetSelectRow(
+                    label = option,
+                    sublabel = if (option == current) "Current role" else null,
+                    selected = option == current,
+                    onClick = {
+                        scope.launch {
+                            sheetState.hide()
+                            onSelect(option)
+                        }
+                    },
+                )
+                if (index < options.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    )
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+        }
+    }
 }
 
 @Composable private fun InviteDialog(inviting: Boolean, error: String?, onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {

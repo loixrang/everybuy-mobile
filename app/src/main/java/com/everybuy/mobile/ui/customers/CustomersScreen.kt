@@ -25,7 +25,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -36,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.everybuy.mobile.R
 import com.everybuy.mobile.core.util.formatNaira
+import com.everybuy.mobile.core.util.matchesSearch
 import com.everybuy.mobile.data.CustomerListItemDto
 import com.everybuy.mobile.ui.components.EmptyPane
 import com.everybuy.mobile.ui.components.ErrorPane
@@ -59,6 +65,7 @@ fun CustomersScreen(
     viewModel: CustomersViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(state) { if (state is CustomersState.SessionExpired) onSessionExpired() }
 
     EverybuyScreen(
@@ -93,6 +100,8 @@ fun CustomersScreen(
             is CustomersState.Ready -> CustomersContent(
                 state = current,
                 viewModel = viewModel,
+                query = query,
+                onQueryChange = { query = it },
                 onOpenCustomer = onOpenCustomer,
                 padding = padding,
                 modifier = Modifier.fillMaxSize(),
@@ -106,11 +115,31 @@ fun CustomersScreen(
 private fun CustomersContent(
     state: CustomersState.Ready,
     viewModel: CustomersViewModel,
+    query: String,
+    onQueryChange: (String) -> Unit,
     onOpenCustomer: (String) -> Unit,
     padding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
-    val filtered = state.filtered
+    val filtered by remember(state.customers, state.status, query) {
+        derivedStateOf {
+            state.filtered.filter { customer ->
+                matchesSearch(
+                    listOf(
+                        customer.id,
+                        customer.name,
+                        customer.phone.orEmpty(),
+                        customer.address.orEmpty(),
+                        customer.notes.orEmpty(),
+                        customer.balance,
+                        customer.totalPurchases,
+                        customer.lastSaleAt.orEmpty(),
+                    ).joinToString(" "),
+                    query,
+                )
+            }
+        }
+    }
     val statusFilters = listOf(
         stringResource(R.string.customers_all) to STATUS_ALL,
         stringResource(R.string.customers_active) to STATUS_ACTIVE,
@@ -128,8 +157,8 @@ private fun CustomersContent(
     ) {
         item {
             ExpressiveSearchField(
-                value = state.query,
-                onValueChange = viewModel::setQuery,
+                value = query,
+                onValueChange = onQueryChange,
                 placeholder = stringResource(R.string.customers_search),
             )
         }
@@ -159,9 +188,7 @@ private fun CustomersContent(
             )
         }
         if (filtered.isEmpty()) {
-            if (state.searching) {
-                item { androidx.compose.material3.LoadingIndicator(Modifier.fillMaxWidth().padding(16.dp)) }
-            } else item {
+            item {
                 EmptyPane(
                     title = if (state.customers.isEmpty()) {
                         stringResource(R.string.customers_empty)

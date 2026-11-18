@@ -15,7 +15,10 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -49,6 +52,8 @@ val EverybuyShapes = Shapes(
 )
 
 private val BaseTypography = Typography()
+
+val LocalWarningColor = staticCompositionLocalOf { Color(0xFF7A4B00) }
 
 private fun TextStyle.scale(size: TextUnit, weight: FontWeight): TextStyle = copy(
     fontFamily = Poppins,
@@ -208,13 +213,16 @@ fun EverybuyTheme(
     colors: ColorScheme,
     content: @Composable () -> Unit,
 ) {
-    MaterialExpressiveTheme(
-        colorScheme = colors,
-        motionScheme = MotionScheme.expressive(),
-        shapes = EverybuyShapes,
-        typography = EverybuyTypography,
-        content = content,
-    )
+    val warningColor = if (colors.surface.luminance() < 0.5f) Color(0xFFFFD08A) else Color(0xFF7A4B00)
+    CompositionLocalProvider(LocalWarningColor provides warningColor) {
+        MaterialExpressiveTheme(
+            colorScheme = colors,
+            motionScheme = MotionScheme.expressive(),
+            shapes = EverybuyShapes,
+            typography = EverybuyTypography,
+            content = content,
+        )
+    }
 }
 
 /** True when the system asks apps to remove animations (Settings > Remove animations). */

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -21,8 +22,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -36,19 +35,24 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.everybuy.mobile.core.util.formatNaira
+import com.everybuy.mobile.core.util.matchesSearch
+import com.everybuy.mobile.data.CustomerListItemDto
 import com.everybuy.mobile.data.CreateSaleResultDto
 import com.everybuy.mobile.data.ProductDto
+import com.everybuy.mobile.ui.components.ExpressiveSearchField
 import java.math.BigDecimal
 
 private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", "pos" to "POS")
@@ -58,9 +62,15 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
     onBack: () -> Unit,
     onViewMovements: () -> Unit,
     onSessionExpired: () -> Unit,
+    onNewCustomer: () -> Unit = {},
+    onClearCustomerRefresh: () -> Unit = {},
+    customersOverride: List<CustomerListItemDto>? = null,
+    customerRefreshError: String? = null,
+    onRetryCustomerRefresh: () -> Unit = {},
     viewModel: RecordSaleViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    var productSearchQuery by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(state) { if (state is RecordSaleState.SessionExpired) onSessionExpired() }
     Scaffold(topBar = {
         TopAppBar(title = { Text("Record sale") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back") } })
@@ -76,9 +86,30 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
                 TextButton(onClick = { viewModel.load() }) { Text("Retry") }
             }
             is RecordSaleState.Ready -> if (current.success != null) {
-                SaleSuccess(current.success, onBack, onViewMovements, { viewModel.recordAnother() }, Modifier.fillMaxSize().padding(insets))
+                SaleSuccess(
+                    current.success,
+                    onBack,
+                    onViewMovements,
+                    {
+                        productSearchQuery = ""
+                        onClearCustomerRefresh()
+                        viewModel.recordAnother()
+                    },
+                    Modifier.fillMaxSize().padding(insets),
+                )
             } else {
-                RecordSaleForm(current, viewModel, onBack, Modifier.fillMaxSize().padding(insets))
+                RecordSaleForm(
+                    current,
+                    viewModel,
+                    onBack,
+                    customersOverride,
+                    productSearchQuery,
+                    { productSearchQuery = it },
+                    customerRefreshError,
+                    onRetryCustomerRefresh,
+                    onNewCustomer,
+                    Modifier.fillMaxSize().padding(insets),
+                )
             }
         }
     }
@@ -115,15 +146,49 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
     }
 }
 
-@Composable private fun RecordSaleForm(state: RecordSaleState.Ready, viewModel: RecordSaleViewModel, onBack: () -> Unit, modifier: Modifier = Modifier) {
-    var customerMenu by remember { mutableStateOf(false) }
+@Composable private fun RecordSaleForm(
+    state: RecordSaleState.Ready,
+    viewModel: RecordSaleViewModel,
+    onBack: () -> Unit,
+    customersOverride: List<CustomerListItemDto>?,
+    productSearchQuery: String,
+    onProductSearchQueryChange: (String) -> Unit,
+    customerRefreshError: String?,
+    onRetryCustomerRefresh: () -> Unit,
+    onNewCustomer: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val productMap = remember(state.products) { state.products.associateBy { it.id } }
     val lines = remember(state.lines, productMap) { buildSaleLines(state.lines, productMap) }
     val total = remember(lines) { saleTotal(lines) }
+    val customers = remember(state.customers, customersOverride) {
+        customersOverride?.filter(CustomerListItemDto::active) ?: state.customers
+    }
+    val productResults by remember(state.products, state.productSearchText, productSearchQuery) {
+        derivedStateOf {
+            if (productSearchQuery.isBlank()) emptyList()
+            else state.products.asSequence()
+                .filter { it.active && it.stockPacks > 0 }
+                .filter { product ->
+                    matchesSearch(
+                        listOf(
+                            product.name,
+                            state.productSearchText[product.id].orEmpty(),
+                            product.packName,
+                            product.size.orEmpty(),
+                            product.packsPerBag.toString(),
+                            product.piecesPerPack?.toString().orEmpty(),
+                        ).joinToString(" "),
+                        productSearchQuery,
+                    )
+                }
+                .take(8)
+                .toList()
+        }
+    }
     val amountPaid = state.amountPaid.trim().ifBlank { "0" }.toBigDecimalOrNull() ?: BigDecimal.ZERO
     val balance = (total - amountPaid).max(BigDecimal.ZERO)
     val nothingPaid = amountPaid.compareTo(BigDecimal.ZERO) == 0
-    val selectedCustomer = state.customers.firstOrNull { it.id == state.customerId }
 
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     Column(
@@ -136,21 +201,42 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
     ) {
         Text("Sell packs or bags from the same stock balance. Prices and stock are verified by the server.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         state.customerWarning?.let { Text(it, color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.bodySmall) }
+        customerRefreshError?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = onRetryCustomerRefresh) { Text("Retry customer refresh") }
+        }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
 
-        OutlinedTextField(state.search, viewModel::updateSearch, Modifier.fillMaxWidth(), label = { Text("Search products to add") }, singleLine = true)
-        if (state.search.isNotBlank() && state.searchResults.isNotEmpty()) {
+        ExpressiveSearchField(
+            value = productSearchQuery,
+            onValueChange = onProductSearchQueryChange,
+            placeholder = "Search products to add",
+        )
+        if (productSearchQuery.isNotBlank() && productResults.isNotEmpty()) {
             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column {
-                    state.searchResults.forEach { product ->
-                        DropdownMenuItem(
-                            text = { Column { Text(product.name, fontWeight = FontWeight.Medium); Text("${product.packName} · ${product.stockPacks} packs available", style = MaterialTheme.typography.bodySmall) } },
-                            onClick = { viewModel.addProduct(product.id) },
-                        )
+                    productResults.forEachIndexed { index, product ->
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = {
+                                    viewModel.addProduct(product.id)
+                                    onProductSearchQueryChange("")
+                                })
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                        ) {
+                            Text(product.name, fontWeight = FontWeight.Medium)
+                            Text(
+                                "${product.packName} · ${product.stockPacks} packs available",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (index < productResults.lastIndex) androidx.compose.material3.HorizontalDivider()
                     }
                 }
             }
-        } else if (state.search.isNotBlank() && !state.searching) {
+        } else if (productSearchQuery.isNotBlank()) {
             Text("No active product with stock matches that search.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
@@ -164,16 +250,13 @@ private val paymentMethods = listOf("cash" to "Cash", "transfer" to "Transfer", 
         }
 
         Text("Customer and payment", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Box {
-            OutlinedTextField(selectedCustomer?.name ?: "Walk-in customer", {}, Modifier.fillMaxWidth(), label = { Text("Customer") }, readOnly = true, singleLine = true, trailingIcon = { TextButton(onClick = { customerMenu = true }) { Text("Change") } })
-            DropdownMenu(expanded = customerMenu, onDismissRequest = { customerMenu = false }) {
-                DropdownMenuItem(text = { Text("Walk-in customer") }, onClick = { viewModel.setCustomer(""); customerMenu = false })
-                state.customers.forEach { customer ->
-                    DropdownMenuItem(text = { Column { Text(customer.name); Text("Balance ${formatNaira(customer.balance)}", style = MaterialTheme.typography.bodySmall) } }, onClick = { viewModel.setCustomer(customer.id); customerMenu = false })
-                }
-            }
-        }
-        if (state.customers.isEmpty()) Text("No customers available. A customer is required only when the sale has an unpaid balance.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        SaleCustomerPicker(
+            customers = customers,
+            selectedCustomerId = state.customerId.takeIf(String::isNotBlank),
+            onSelect = { viewModel.setCustomer(it.orEmpty()) },
+            onNewCustomer = onNewCustomer,
+        )
+        if (customers.isEmpty()) Text("No customers available. A customer is required only when the sale has an unpaid balance.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(state.amountPaid, viewModel::setAmountPaid, Modifier.fillMaxWidth(), label = { Text("Amount paid (₦)") }, placeholder = { Text("0") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), supportingText = { Text(if (nothingPaid) "Nothing paid is recorded as a credit sale." else "Payment for this sale") })
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(paymentMethods, key = { it.first }) { (value, label) ->

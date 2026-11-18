@@ -17,7 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material3.AlertDialog
+import com.everybuy.mobile.ui.components.GlassAlertDialog as AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -32,8 +32,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,6 +50,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.everybuy.mobile.R
 import com.everybuy.mobile.core.util.formatLagosDateTime
 import com.everybuy.mobile.core.util.formatNaira
+import com.everybuy.mobile.core.util.matchesSearch
 import com.everybuy.mobile.data.ExpenseDto
 import com.everybuy.mobile.ui.components.EmptyPane
 import com.everybuy.mobile.ui.components.ErrorPane
@@ -71,6 +74,7 @@ fun ExpensesScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var showForm by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(state) { if (state is ExpensesState.SessionExpired) onSessionExpired() }
 
     EverybuyScreen(
@@ -109,6 +113,8 @@ fun ExpensesScreen(
             is ExpensesState.Ready -> ExpensesContent(
                 state = current,
                 viewModel = viewModel,
+                query = query,
+                onQueryChange = { query = it },
                 padding = padding,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -140,11 +146,32 @@ fun ExpensesScreen(
 private fun ExpensesContent(
     state: ExpensesState.Ready,
     viewModel: ExpensesViewModel,
+    query: String,
+    onQueryChange: (String) -> Unit,
     padding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
     val thisMonth = currentLagosMonth()
-    val filtered = state.filtered
+    val filtered by remember(state.expenses, query) {
+        derivedStateOf {
+            state.filtered.filter { expense ->
+                matchesSearch(
+                    listOf(
+                        expense.id,
+                        expense.requestId,
+                        expense.title,
+                        expense.category,
+                        expense.amount,
+                        expense.notes.orEmpty(),
+                        expense.spentAt,
+                        expense.recordedBy,
+                        expense.createdAt,
+                    ).joinToString(" "),
+                    query,
+                )
+            }
+        }
+    }
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
@@ -196,8 +223,8 @@ private fun ExpensesContent(
         }
         item {
             ExpressiveSearchField(
-                value = state.query,
-                onValueChange = viewModel::setQuery,
+                value = query,
+                onValueChange = onQueryChange,
                 placeholder = stringResource(R.string.expenses_search),
             )
         }
@@ -215,9 +242,7 @@ private fun ExpensesContent(
             )
         }
         if (filtered.isEmpty()) {
-            if (state.searching) {
-                item { androidx.compose.material3.LoadingIndicator(Modifier.fillMaxWidth().padding(16.dp)) }
-            } else item {
+            item {
                 EmptyPane(
                     title = if (state.expenses.isEmpty()) {
                         stringResource(R.string.expenses_empty)

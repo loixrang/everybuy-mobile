@@ -17,8 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,15 +31,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.foundation.clickable
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.everybuy.mobile.ui.components.SheetSelect
+import com.everybuy.mobile.ui.components.SheetSelectOption
 
 private val packNames = listOf("Small Pack", "Twin Pack", "Jumbo Pack", "Wipes", "Pad", "Tissue")
 
@@ -124,12 +121,13 @@ private val packNames = listOf("Small Pack", "Twin Pack", "Jumbo Pack", "Wipes",
 }
 
 @Composable private fun ProductChoice(label: String, options: List<Pair<String, String>>, selected: String, error: String?, onSelected: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val value = options.firstOrNull { it.first == selected }?.second ?: "Choose $label"
-    Box {
-        OutlinedTextField(value = value, onValueChange = {}, modifier = Modifier.fillMaxWidth().clickable { expanded = true }, label = { Text(label) }, readOnly = true, singleLine = true, isError = error != null, supportingText = if (error == null) null else { { Text(error) } })
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { (id, name) -> DropdownMenuItem(text = { Text(name) }, onClick = { onSelected(id); expanded = false }) }
-        }
-    }
+    SheetSelect(
+        label = label,
+        placeholder = "Choose $label",
+        options = options.map { (id, name) -> SheetSelectOption(id, id, name) },
+        selected = selected.takeIf(String::isNotBlank),
+        onSelect = { value -> value?.let(onSelected) },
+        searchable = options.size >= 8,
+        error = error,
+    )
 }

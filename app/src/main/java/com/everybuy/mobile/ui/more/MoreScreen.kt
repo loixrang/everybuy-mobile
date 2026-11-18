@@ -21,7 +21,6 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SheetValue
@@ -37,8 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.everybuy.mobile.R
-import com.everybuy.mobile.ui.components.glass
-import dev.chrisbanes.haze.HazeState
+import com.everybuy.mobile.ui.components.GlassModalBottomSheet
 import kotlinx.coroutines.launch
 
 private data class MoreEntry(
@@ -53,7 +51,6 @@ private data class MoreEntry(
 fun MoreBottomSheet(
     userName: String,
     email: String,
-    hazeState: HazeState,
     onDismiss: () -> Unit,
     onNavigate: (String) -> Unit,
     onSignOut: () -> Unit,
@@ -69,12 +66,9 @@ fun MoreBottomSheet(
     )
     val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.92f
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.glass(hazeState),
     ) {
         Column(
             Modifier

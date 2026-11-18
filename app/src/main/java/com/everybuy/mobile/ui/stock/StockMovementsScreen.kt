@@ -18,24 +18,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,9 +47,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.everybuy.mobile.R
 import com.everybuy.mobile.core.util.formatLagosDateTime
+import com.everybuy.mobile.core.util.matchesSearch
 import com.everybuy.mobile.data.ProductDto
 import com.everybuy.mobile.data.StockMovementDto
 import com.everybuy.mobile.ui.components.EmptyPane
@@ -59,6 +61,10 @@ import com.everybuy.mobile.ui.components.LoadingPane
 import com.everybuy.mobile.ui.components.SectionHeader
 import com.everybuy.mobile.ui.components.TonalBadge
 import com.everybuy.mobile.ui.components.TonalCard
+import com.everybuy.mobile.ui.components.GlassModalBottomSheet
+import com.everybuy.mobile.ui.components.SheetSelect
+import com.everybuy.mobile.ui.components.SheetSelectOption
+import kotlinx.coroutines.launch
 
 private data class MovementFilter(val labelRes: Int, val value: String)
 
@@ -89,8 +95,6 @@ fun StockMovementsScreen(
     var productFilter by rememberSaveable(initialProductId) {
         mutableStateOf(initialProductId?.takeIf { it.isNotBlank() } ?: "ALL")
     }
-    var movementProductMenu by remember { mutableStateOf(false) }
-    var adjustmentProductMenu by remember { mutableStateOf(false) }
     var adjustmentOpen by remember { mutableStateOf(false) }
     var adjustmentProductId by rememberSaveable { mutableStateOf("") }
     val adjustmentState by adjustmentViewModel.state.collectAsState()
@@ -130,9 +134,35 @@ fun StockMovementsScreen(
             )
             is StockMovementsState.Ready -> {
                 val products = current.products.associateBy { it.id }
-                val filtered = current.searchResults.filter { movement ->
-                    (type == "ALL" || movement.type == type) &&
-                        (productFilter == "ALL" || movement.productId == productFilter)
+                val filtered by remember(current.movements, current.products, query, type, productFilter) {
+                    derivedStateOf {
+                        current.movements.filter { movement ->
+                            val product = products[movement.productId]
+                            matchesSearch(
+                                listOf(
+                                    movement.id,
+                                    movement.productId,
+                                    product?.name.orEmpty(),
+                                    product?.size.orEmpty(),
+                                    product?.packName.orEmpty(),
+                                    product?.categoryId.orEmpty(),
+                                    product?.brandId.orEmpty(),
+                                    movement.type,
+                                    movement.changePacks.toString(),
+                                    movement.supplierId?.toString().orEmpty(),
+                                    movement.saleItemId.orEmpty(),
+                                    movement.requestId.orEmpty(),
+                                    movement.costPerPack.orEmpty(),
+                                    movement.note.orEmpty(),
+                                    movement.createdBy,
+                                    movement.createdAt,
+                                ).joinToString(" "),
+                                query,
+                            ) &&
+                                (type == "ALL" || movement.type == type) &&
+                                (productFilter == "ALL" || movement.productId == productFilter)
+                        }
+                    }
                 }
                 Column(
                     Modifier
@@ -148,28 +178,16 @@ fun StockMovementsScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Box(Modifier.weight(1f)) {
-                                FilledTonalButton(onClick = { adjustmentProductMenu = true }) {
-                                    Text(
-                                        text = current.products.firstOrNull { it.id == adjustmentProductId }?.name
-                                            ?: stringResource(R.string.history_choose_product),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded = adjustmentProductMenu,
-                                    onDismissRequest = { adjustmentProductMenu = false },
-                                ) {
-                                    current.products.forEach { product ->
-                                        DropdownMenuItem(
-                                            text = { Text(product.name) },
-                                            onClick = {
-                                                adjustmentProductId = product.id
-                                                adjustmentProductMenu = false
-                                            },
-                                        )
-                                    }
-                                }
+                                SheetSelect(
+                                    label = stringResource(R.string.history_choose_product),
+                                    placeholder = stringResource(R.string.history_choose_product),
+                                    options = current.products.map { product ->
+                                        SheetSelectOption(product.id, product.id, product.name)
+                                    },
+                                    selected = adjustmentProductId.takeIf(String::isNotBlank),
+                                    onSelect = { productId -> adjustmentProductId = productId.orEmpty() },
+                                    searchable = current.products.size >= 8,
+                                )
                             }
                             Button(
                                 onClick = {
@@ -184,7 +202,6 @@ fun StockMovementsScreen(
                         value = query,
                         onValueChange = {
                             query = it
-                            viewModel.setQuery(it)
                         },
                         placeholder = stringResource(R.string.history_search),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -212,35 +229,18 @@ fun StockMovementsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Box {
-                            TextButton(onClick = { movementProductMenu = true }) {
-                                Text(
-                                    text = products[productFilter]?.name
-                                        ?: stringResource(R.string.history_all_products),
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = movementProductMenu,
-                                onDismissRequest = { movementProductMenu = false },
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.history_all_products)) },
-                                    onClick = {
-                                        productFilter = "ALL"
-                                        movementProductMenu = false
-                                    },
-                                )
-                                current.products.forEach { product ->
-                                    DropdownMenuItem(
-                                        text = { Text(product.name) },
-                                        onClick = {
-                                            productFilter = product.id
-                                            movementProductMenu = false
-                                        },
-                                    )
-                                }
-                            }
-                        }
+                        SheetSelect(
+                            label = stringResource(R.string.history_all_products),
+                            placeholder = stringResource(R.string.history_all_products),
+                            options = listOf(
+                                SheetSelectOption("all", "ALL", stringResource(R.string.history_all_products)),
+                            ) + current.products.map { product ->
+                                SheetSelectOption(product.id, product.id, product.name)
+                            },
+                            selected = productFilter,
+                            onSelect = { productFilter = it ?: "ALL" },
+                            searchable = current.products.size + 1 >= 8,
+                        )
                         Text(
                             text = pluralStringResource(R.plurals.history_count, filtered.size, filtered.size),
                             style = MaterialTheme.typography.labelLarge,
@@ -248,18 +248,14 @@ fun StockMovementsScreen(
                         )
                     }
                     if (filtered.isEmpty()) {
-                        if (current.searching) {
-                            androidx.compose.material3.LoadingIndicator(Modifier.fillMaxWidth().padding(16.dp))
-                        } else {
-                            EmptyPane(
-                                title = if (query.isBlank() && type == "ALL" && productFilter == "ALL") {
-                                    stringResource(R.string.history_empty)
-                                } else {
-                                    stringResource(R.string.history_no_matches)
-                                },
-                                body = stringResource(R.string.history_search),
-                            )
-                        }
+                        EmptyPane(
+                            title = if (query.isBlank() && type == "ALL" && productFilter == "ALL") {
+                                stringResource(R.string.history_empty)
+                            } else {
+                                stringResource(R.string.history_no_matches)
+                            },
+                            body = stringResource(R.string.history_search),
+                        )
                     } else {
                         LazyColumn(
                             modifier = Modifier.weight(1f),
@@ -328,9 +324,20 @@ private fun StockAdjustmentSheet(
     var direction by rememberSaveable(product.id) { mutableStateOf("Add") }
     var quantity by rememberSaveable(product.id) { mutableStateOf("") }
     var note by rememberSaveable(product.id) { mutableStateOf("") }
-    ModalBottomSheet(
-        onDismissRequest = { if (state !is StockAdjustmentState.Saving) onDismiss() },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        confirmValueChange = { state !is StockAdjustmentState.Saving || it != SheetValue.Hidden },
+    )
+    val scope = rememberCoroutineScope()
+    val closeSheet: () -> Unit = {
+        scope.launch {
+            sheetState.hide()
+            if (!sheetState.isVisible) onDismiss()
+        }
+    }
+    GlassModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
     ) {
         Column(
             Modifier
@@ -408,7 +415,7 @@ private fun StockAdjustmentSheet(
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
-                    onClick = onDismiss,
+                    onClick = closeSheet,
                     enabled = state !is StockAdjustmentState.Saving,
                     modifier = Modifier.weight(1f),
                 ) { Text(stringResource(R.string.action_cancel)) }

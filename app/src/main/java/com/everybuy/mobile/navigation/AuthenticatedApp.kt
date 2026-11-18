@@ -28,6 +28,7 @@ import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,8 +49,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.window.core.layout.WindowSizeClass
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.everybuy.mobile.R
 import com.everybuy.mobile.data.AuthUser
+import com.everybuy.mobile.data.CustomerListItemDto
 import com.everybuy.mobile.data.StaffProfile
 import com.everybuy.mobile.ui.audit.AuditScreen
 import com.everybuy.mobile.ui.auth.AppTheme
@@ -63,6 +66,8 @@ import com.everybuy.mobile.ui.components.hazeBlurEnabled
 import com.everybuy.mobile.ui.customers.CustomerDetailScreen
 import com.everybuy.mobile.ui.customers.CustomerFormScreen
 import com.everybuy.mobile.ui.customers.CustomersScreen
+import com.everybuy.mobile.ui.customers.CustomersState
+import com.everybuy.mobile.ui.customers.CustomersViewModel
 import com.everybuy.mobile.ui.expenses.ExpensesScreen
 import com.everybuy.mobile.ui.inventory.InventoryScreen
 import com.everybuy.mobile.ui.inventory.ProductDetailScreen
@@ -70,6 +75,7 @@ import com.everybuy.mobile.ui.inventory.ProductFormScreen
 import com.everybuy.mobile.ui.more.MoreBottomSheet
 import com.everybuy.mobile.ui.reports.OverviewScreen
 import com.everybuy.mobile.ui.sales.RecordSaleScreen
+import com.everybuy.mobile.ui.sales.RecordSaleViewModel
 import com.everybuy.mobile.ui.sales.SaleDetailScreen
 import com.everybuy.mobile.ui.sales.SalesScreen
 import com.everybuy.mobile.ui.settings.CatalogScreen
@@ -245,7 +251,6 @@ fun AuthenticatedApp(
             MoreBottomSheet(
                 userName = user.name.ifBlank { user.email },
                 email = user.email,
-                hazeState = hazeState,
                 onDismiss = { moreSheetOpen = false },
                 onNavigate = ::navigateTo,
                 onSignOut = onSignOut,
@@ -392,7 +397,49 @@ private fun NavGraph(
                 onSessionExpired = onSignOut,
             )
         }
-        composable("sales/new") { RecordSaleScreen(onBack = { navController.popBackStack() }, onViewMovements = { navController.navigate("movements") { launchSingleTop = true } }, onSessionExpired = onSignOut) }
+        composable("sales/new") { entry ->
+            val saleViewModel: RecordSaleViewModel = hiltViewModel()
+            val createdCustomerId by entry.savedStateHandle
+                .getStateFlow<String?>("saleCreatedCustomerId", null)
+                .collectAsState()
+            var refreshedCustomers by remember(entry) { mutableStateOf<List<CustomerListItemDto>?>(null) }
+            var customerRefreshError by remember(entry) { mutableStateOf<String?>(null) }
+            var retryCustomerRefresh by remember(entry) { mutableStateOf<(() -> Unit)?>(null) }
+            val createdId = createdCustomerId
+            if (createdId != null) {
+                SaleCustomerRefresh(
+                    requestId = createdId,
+                    onLoading = { customerRefreshError = null },
+                    onLoaded = { customers ->
+                        refreshedCustomers = customers.filter { it.active }
+                        customerRefreshError = null
+                        retryCustomerRefresh = null
+                        saleViewModel.setCustomer(createdId)
+                        entry.savedStateHandle.remove<String>("saleCreatedCustomerId")
+                    },
+                    onFailed = { message, retry ->
+                        customerRefreshError = message
+                        retryCustomerRefresh = retry
+                    },
+                    onSessionExpired = onSignOut,
+                )
+            }
+            RecordSaleScreen(
+                onBack = { navController.popBackStack() },
+                onViewMovements = { navController.navigate("movements") { launchSingleTop = true } },
+                onSessionExpired = onSignOut,
+                onNewCustomer = { navController.navigate("customers/new/from-sale") },
+                onClearCustomerRefresh = {
+                    refreshedCustomers = null
+                    customerRefreshError = null
+                    retryCustomerRefresh = null
+                },
+                customersOverride = refreshedCustomers,
+                customerRefreshError = customerRefreshError,
+                onRetryCustomerRefresh = { retryCustomerRefresh?.invoke() },
+                viewModel = saleViewModel,
+            )
+        }
         composable("sales/{saleId}", arguments = listOf(navArgument("saleId") { type = NavType.StringType })) { entry ->
             val saleId = entry.arguments?.getString("saleId")
             if (saleId != null) SaleDetailScreen(saleId, onBack = { navController.popBackStack() }, onCustomerSelected = { id -> navController.navigate("customers/$id") }, onSessionExpired = onSignOut)
@@ -407,6 +454,17 @@ private fun NavGraph(
             )
         }
         composable("customers/new") { CustomerFormScreen(null, onBack = { navController.popBackStack() }, onSaved = { id -> navController.navigate("customers/$id") { popUpTo("customers") } }, onSessionExpired = onSignOut) }
+        composable("customers/new/from-sale") {
+            CustomerFormScreen(
+                id = null,
+                onBack = { navController.popBackStack() },
+                onSaved = { id ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set("saleCreatedCustomerId", id)
+                    navController.popBackStack()
+                },
+                onSessionExpired = onSignOut,
+            )
+        }
         composable("customers/{customerId}", arguments = listOf(navArgument("customerId") { type = NavType.StringType })) { entry ->
             val customerId = entry.arguments?.getString("customerId")
             if (customerId != null) CustomerDetailScreen(
@@ -417,6 +475,7 @@ private fun NavGraph(
                 onSessionExpired = onSignOut,
             )
         }
+
         composable("customers/{customerId}/edit", arguments = listOf(navArgument("customerId") { type = NavType.StringType })) { entry ->
             val customerId = entry.arguments?.getString("customerId")
             if (customerId != null) CustomerFormScreen(customerId, onBack = { navController.popBackStack() }, onSaved = { id -> navController.navigate("customers/$id") { popUpTo("customers") } }, onSessionExpired = onSignOut)
@@ -454,6 +513,32 @@ private fun NavGraph(
         composable("inventory/product/{productId}/edit", arguments = listOf(navArgument("productId") { type = NavType.StringType })) { entry ->
             val productId = entry.arguments?.getString("productId")
             if (productId != null) ProductFormScreen(productId, onBack = { navController.popBackStack() }, onSaved = { id -> navController.navigate("inventory/product/$id") { popUpTo("inventory") } }, onSessionExpired = onSignOut)
+        }
+    }
+
+}
+
+@Composable
+private fun SaleCustomerRefresh(
+    requestId: String,
+    onLoading: () -> Unit,
+    onLoaded: (List<CustomerListItemDto>) -> Unit,
+    onFailed: (String, () -> Unit) -> Unit,
+    onSessionExpired: () -> Unit,
+) {
+    val viewModel: CustomersViewModel = hiltViewModel()
+    val state by viewModel.state.collectAsState()
+    LaunchedEffect(requestId) {
+        if (viewModel.state.value !is CustomersState.Loading) {
+            viewModel.refresh()
+        }
+    }
+    LaunchedEffect(state) {
+        when (val current = state) {
+            CustomersState.Loading -> onLoading()
+            is CustomersState.Ready -> onLoaded(current.customers)
+            is CustomersState.Failed -> onFailed(current.message) { viewModel.refresh() }
+            CustomersState.SessionExpired -> onSessionExpired()
         }
     }
 }

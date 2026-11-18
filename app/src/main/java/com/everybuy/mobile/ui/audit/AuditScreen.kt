@@ -16,7 +16,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -26,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.everybuy.mobile.R
 import com.everybuy.mobile.core.util.formatLagosDateTime
+import com.everybuy.mobile.core.util.matchesSearch
 import com.everybuy.mobile.data.AuditEntryDto
 import com.everybuy.mobile.ui.components.EmptyPane
 import com.everybuy.mobile.ui.components.ErrorPane
@@ -43,6 +49,7 @@ fun AuditScreen(
     viewModel: AuditViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(state) { if (state is AuditState.SessionExpired) onSessionExpired() }
 
     EverybuyScreen(
@@ -68,7 +75,8 @@ fun AuditScreen(
             )
             is AuditState.Ready -> AuditContent(
                 state = current,
-                viewModel = viewModel,
+                query = query,
+                onQueryChange = { query = it },
                 padding = padding,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -80,11 +88,28 @@ fun AuditScreen(
 @Composable
 private fun AuditContent(
     state: AuditState.Ready,
-    viewModel: AuditViewModel,
+    query: String,
+    onQueryChange: (String) -> Unit,
     padding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
-    val filtered = state.filtered
+    val filtered by remember(state.entries, query) {
+        derivedStateOf {
+            state.filtered.filter { entry ->
+                matchesSearch(
+                    listOf(
+                        entry.actor,
+                        entry.action,
+                        entry.entity,
+                        entry.entityId,
+                        entry.at,
+                        entry.detail?.entries?.joinToString(" ") { (key, value) -> "$key $value" }.orEmpty(),
+                    ).joinToString(" "),
+                    query,
+                )
+            }
+        }
+    }
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
@@ -97,8 +122,8 @@ private fun AuditContent(
     ) {
         item {
             ExpressiveSearchField(
-                value = state.query,
-                onValueChange = viewModel::setQuery,
+                value = query,
+                onValueChange = onQueryChange,
                 placeholder = stringResource(R.string.audit_search),
             )
         }
@@ -106,9 +131,7 @@ private fun AuditContent(
             SectionHeader(title = stringResource(R.string.audit_title))
         }
         if (filtered.isEmpty()) {
-            if (state.searching) {
-                item { androidx.compose.material3.LoadingIndicator(Modifier.fillMaxWidth().padding(16.dp)) }
-            } else item {
+            item {
                 EmptyPane(
                     title = if (state.entries.isEmpty()) {
                         stringResource(R.string.audit_empty)

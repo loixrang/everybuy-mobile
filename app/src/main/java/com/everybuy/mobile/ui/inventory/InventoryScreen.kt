@@ -25,8 +25,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.everybuy.mobile.R
 import com.everybuy.mobile.core.util.formatNaira
+import com.everybuy.mobile.core.util.matchesSearch
 import com.everybuy.mobile.data.AuthUser
 import com.everybuy.mobile.data.ProductDto
 import com.everybuy.mobile.ui.components.EmptyPane
@@ -67,6 +70,7 @@ fun InventoryScreen(
     val state by viewModel.state.collectAsState()
     LaunchedEffect(state) { if (state is InventoryState.Unauthorized) onSessionExpired() }
     var categoryFilter by rememberSaveable { mutableStateOf("ALL") }
+    var query by rememberSaveable { mutableStateOf("") }
 
     EverybuyScreen(
         title = stringResource(R.string.inventory_title),
@@ -102,8 +106,24 @@ fun InventoryScreen(
                 val inventory = current.inventory
                 val categoryNames = inventory.categories.associate { it.id to it.name }
                 val brandNames = inventory.brands.associate { it.id to it.name }
-                val filtered = current.searchResults.filter { product ->
-                    categoryFilter == "ALL" || product.categoryId == categoryFilter
+                val filtered by remember(inventory.products, brandNames, categoryNames, query, categoryFilter) {
+                    derivedStateOf {
+                        inventory.products.filter { product ->
+                            (categoryFilter == "ALL" || product.categoryId == categoryFilter) &&
+                                matchesSearch(
+                                    listOf(
+                                        product.name,
+                                        brandNames[product.brandId].orEmpty(),
+                                        categoryNames[product.categoryId].orEmpty(),
+                                        product.packName,
+                                        product.size.orEmpty(),
+                                        product.packsPerBag.toString(),
+                                        product.piecesPerPack?.toString().orEmpty(),
+                                    ).joinToString(" "),
+                                    query,
+                                )
+                        }
+                    }
                 }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -117,8 +137,8 @@ fun InventoryScreen(
                 ) {
                     item {
                         ExpressiveSearchField(
-                            value = current.query,
-                            onValueChange = viewModel::setQuery,
+                            value = query,
+                            onValueChange = { query = it },
                             placeholder = stringResource(R.string.inventory_search),
                         )
                     }
@@ -151,17 +171,15 @@ fun InventoryScreen(
                     item {
                         SectionHeader(
                             title = pluralStringResource(R.plurals.inventory_products_count, filtered.size, filtered.size),
-                            supporting = if (current.query.isBlank() && categoryFilter == "ALL") {
+                            supporting = if (query.isBlank() && categoryFilter == "ALL") {
                                 stringResource(R.string.inventory_subtitle)
                             } else null,
                         )
                     }
                     if (filtered.isEmpty()) {
-                        if (current.searching) {
-                            item { androidx.compose.material3.LoadingIndicator(Modifier.fillMaxWidth().padding(16.dp)) }
-                        } else item {
+                        item {
                             EmptyPane(
-                                title = if (current.query.isBlank()) stringResource(R.string.inventory_empty) else stringResource(R.string.inventory_no_matches),
+                                title = if (query.isBlank()) stringResource(R.string.inventory_empty) else stringResource(R.string.inventory_no_matches),
                                 body = stringResource(R.string.inventory_search),
                             )
                         }

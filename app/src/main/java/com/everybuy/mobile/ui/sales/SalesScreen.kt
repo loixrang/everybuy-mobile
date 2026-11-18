@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.everybuy.mobile.R
 import com.everybuy.mobile.core.util.formatLagosDateTime
 import com.everybuy.mobile.core.util.formatNaira
+import com.everybuy.mobile.core.util.matchesSearch
 import com.everybuy.mobile.data.SalesListRowDto
 import com.everybuy.mobile.data.SalesSummaryDto
 import com.everybuy.mobile.ui.components.EmptyPane
@@ -110,6 +112,26 @@ fun SalesScreen(
                 Modifier.padding(top = padding.calculateTopPadding()),
             )
             is SalesState.Ready -> {
+                val filteredRows by remember(current.rows, query) {
+                    derivedStateOf {
+                        current.rows.filter { row ->
+                            matchesSearch(
+                                listOf(
+                                    row.id,
+                                    row.reference,
+                                    row.createdAt,
+                                    row.customer?.id.orEmpty(),
+                                    row.customer?.name.orEmpty(),
+                                    row.itemsTotal,
+                                    row.amountPaid,
+                                    row.balance,
+                                    row.status,
+                                ).joinToString(" "),
+                                query,
+                            )
+                        }
+                    }
+                }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
@@ -126,10 +148,7 @@ fun SalesScreen(
                     item {
                         ExpressiveSearchField(
                             value = query,
-                            onValueChange = {
-                                query = it
-                                viewModel.setQuery(it)
-                            },
+                            onValueChange = { query = it },
                             placeholder = stringResource(R.string.sales_search),
                         )
                     }
@@ -213,13 +232,7 @@ fun SalesScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    if (current.searchResults.isEmpty() && current.searching) {
-                        item {
-                            androidx.compose.material3.LoadingIndicator(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                            )
-                        }
-                    } else if (current.searchResults.isEmpty()) {
+                    if (filteredRows.isEmpty()) {
                         item {
                             EmptyPane(
                                 title = stringResource(R.string.sales_no_results),
@@ -227,7 +240,7 @@ fun SalesScreen(
                             )
                         }
                     } else {
-                        items(current.searchResults, key = { it.id }) { row ->
+                        items(filteredRows, key = { it.id }) { row ->
                             SaleRowCard(row) { onOpenSale(row.id) }
                         }
                         item {
